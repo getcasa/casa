@@ -1,8 +1,7 @@
 package cmd
 
 import (
-	"fmt"
-
+	"github.com/ItsJimi/casa/server"
 	"github.com/spf13/cobra"
 )
 
@@ -15,6 +14,6 @@ var startCmd = &cobra.Command{
 	Short: "Start casa server",
 	Long:  "Start casa server.",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Start")
+		server.Start()
 	},
 }
