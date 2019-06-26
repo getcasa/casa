@@ -79,32 +79,50 @@ var DB *sqlx.DB
 // InitDB check and create tables
 func InitDB() {
 	var err error
-	DB, err = sqlx.Open("sqlite3", "./casa.db")
+	connStr := "postgres://postgres:password@localhost/?sslmode=disable"
+	db, err := sqlx.Open("postgres", connStr)
 	if err != nil {
 		log.Panic(err)
 	}
 
-	_, err = DB.Exec("CREATE TABLE IF NOT EXISTS user (id BLOB PRIMARY KEY, firstname TEXT, lastname TEXT, email TEXT, password TEXT, birthdate TEXT, created_at TEXT)")
+	_, err = db.Exec("CREATE database casadb")
 	if err != nil {
 		log.Panic(err)
 	}
-	_, err = DB.Exec("CREATE TABLE IF NOT EXISTS token (id BLOB PRIMARY KEY, user_id BLOB, type TEXT, ip TEXT, user_agent TEXT, read INTEGER, write INTEGER, manage INTEGER, admin INTEGER, created_at TEXT, expire_at TEXT)")
+
+	db.Close()
+}
+
+// StartDB start the database to use it in server
+func StartDB() {
+	var err error
+	connStr := "postgres://postgres:password@localhost/casadb?sslmode=disable"
+	DB, err = sqlx.Open("postgres", connStr)
 	if err != nil {
 		log.Panic(err)
 	}
-	_, err = DB.Exec("CREATE TABLE IF NOT EXISTS home (id BLOB PRIMARY KEY, name TEXT, address TEXT, created_at TEXT, creator_id BLOB)")
+
+	_, err = DB.Exec("CREATE TABLE IF NOT EXISTS users (id BYTEA PRIMARY KEY, firstname TEXT, lastname TEXT, email TEXT, password TEXT, birthdate TEXT, created_at TEXT)")
 	if err != nil {
 		log.Panic(err)
 	}
-	_, err = DB.Exec("CREATE TABLE IF NOT EXISTS room (id BLOB PRIMARY KEY, name TEXT, home_id BLOB, created_at TEXT, creator_id BLOB)")
+	_, err = DB.Exec("CREATE TABLE IF NOT EXISTS tokens (id BYTEA PRIMARY KEY, user_id BYTEA, type TEXT, ip TEXT, user_agent TEXT, read INTEGER, write INTEGER, manage INTEGER, admin INTEGER, created_at TEXT, expire_at TEXT)")
 	if err != nil {
 		log.Panic(err)
 	}
-	_, err = DB.Exec("CREATE TABLE IF NOT EXISTS device (id BLOB PRIMARY KEY, name TEXT, physical_id TEXT, room_id BLOB, created_at TEXT, creator_id BLOB)")
+	_, err = DB.Exec("CREATE TABLE IF NOT EXISTS homes (id BYTEA PRIMARY KEY, name TEXT, address TEXT, created_at TEXT, creator_id BYTEA)")
 	if err != nil {
 		log.Panic(err)
 	}
-	_, err = DB.Exec("CREATE TABLE IF NOT EXISTS permission (id BLOB PRIMARY KEY, user_id BLOB, type TEXT, type_id BLOB, read INTEGER, write INTEGER, manage INTEGER, admin INTEGER, updated_at TEXT)")
+	_, err = DB.Exec("CREATE TABLE IF NOT EXISTS rooms (id BYTEA PRIMARY KEY, name TEXT, home_id BYTEA, created_at TEXT, creator_id BYTEA)")
+	if err != nil {
+		log.Panic(err)
+	}
+	_, err = DB.Exec("CREATE TABLE IF NOT EXISTS devices (id BYTEA PRIMARY KEY, name TEXT, physical_id TEXT, room_id BYTEA, created_at TEXT, creator_id BYTEA)")
+	if err != nil {
+		log.Panic(err)
+	}
+	_, err = DB.Exec("CREATE TABLE IF NOT EXISTS permissions (id BYTEA PRIMARY KEY, user_id BYTEA, type TEXT, type_id BYTEA, read INTEGER, write INTEGER, manage INTEGER, admin INTEGER, updated_at TEXT)")
 	if err != nil {
 		log.Panic(err)
 	}

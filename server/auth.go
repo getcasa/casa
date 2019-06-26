@@ -68,7 +68,7 @@ func SignUp(c echo.Context) error {
 		})
 	}
 	var user User
-	err := DB.Get(&user, "SELECT * FROM user WHERE email=$1", req.Email)
+	err := DB.Get(&user, "SELECT * FROM users WHERE email=$1", req.Email)
 	if err == nil {
 		return c.JSON(http.StatusBadRequest, MessageResponse{
 			Message: "Email already used",
@@ -91,7 +91,7 @@ func SignUp(c echo.Context) error {
 		Birthdate: req.Birthdate,
 		CreatedAt: time.Now().Format(time.RFC1123),
 	}
-	DB.NamedExec("INSERT INTO user (id, email, password, firstname, lastname, birthdate, created_at) VALUES (:id, :email, :password, :firstname, :lastname, :birthdate, :created_at)", newUser)
+	DB.NamedExec("INSERT INTO users (id, email, password, firstname, lastname, birthdate, created_at) VALUES (:id, :email, :password, :firstname, :lastname, :birthdate, :created_at)", newUser)
 
 	return c.JSON(http.StatusCreated, MessageResponse{
 		Message: "Account created",
@@ -118,7 +118,7 @@ func SignIn(c echo.Context) error {
 	}
 
 	var user User
-	err := DB.Get(&user, "SELECT * FROM user WHERE email=$1", req.Email)
+	err := DB.Get(&user, "SELECT * FROM users WHERE email=$1", req.Email)
 	if err != nil || bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)) != nil {
 		return c.JSON(http.StatusBadRequest, MessageResponse{
 			Message: "Email and password doesn't match",
@@ -141,7 +141,7 @@ func SignIn(c echo.Context) error {
 		CreatedAt: createdAt.Format(time.RFC1123),
 		ExpireAt:  createdAt.AddDate(0, 1, 0).Format(time.RFC1123),
 	}
-	DB.NamedExec("INSERT INTO token (id, user_id, type, ip, user_agent, read, write, manage, admin, created_at, expire_at) VALUES (:id, :user_id, :type, :ip, :user_agent, :read, :write, :manage, :admin, :created_at, :expire_at)", newToken)
+	DB.NamedExec("INSERT INTO tokens (id, user_id, type, ip, user_agent, read, write, manage, admin, created_at, expire_at) VALUES (:id, :user_id, :type, :ip, :user_agent, :read, :write, :manage, :admin, :created_at, :expire_at)", newToken)
 
 	return c.JSON(http.StatusOK, MessageResponse{
 		Message: id,
@@ -151,7 +151,7 @@ func SignIn(c echo.Context) error {
 // IsAuthenticated verify validity of token
 func IsAuthenticated(key string, c echo.Context) (bool, error) {
 	var token Token
-	err := DB.Get(&token, "SELECT * FROM token WHERE id=$1", key)
+	err := DB.Get(&token, "SELECT * FROM tokens WHERE id=$1", key)
 	if err != nil {
 		return false, nil
 	}

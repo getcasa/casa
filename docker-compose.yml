@@ -3,6 +3,8 @@ services:
   casa-timescaledb:
     image: timescale/timescaledb:latest-pg11
     container_name: casa-timescaledb
+    environment:
+      POSTGRES_PASSWORD: password
     ports:
       - 5432:5432
     volumes:

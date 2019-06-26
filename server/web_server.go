@@ -45,5 +45,8 @@ func Start(port string) {
 	// Check authorization
 	v1.Use(middleware.KeyAuth(IsAuthenticated))
 
+	// Homes
+	v1.POST("/homes", AddHome)
+
 	e.Logger.Fatal(e.Start(":" + port))
 }
