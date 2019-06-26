@@ -164,5 +164,12 @@ func IsAuthenticated(key string, c echo.Context) (bool, error) {
 		return false, nil
 	}
 
+	var user User
+	err = DB.Get(&user, "SELECT * FROM users WHERE id=$1", token.UserID)
+	if err != nil {
+		return false, nil
+	}
+	c.Set("user", user)
+
 	return true, nil
 }
