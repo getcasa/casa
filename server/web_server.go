@@ -16,6 +16,11 @@ type MessageResponse struct {
 	Message string `json:"message"`
 }
 
+// DataReponse define json response for API
+type DataReponse struct {
+	Data interface{} `json:"data"`
+}
+
 // NewULID create an ulid
 func NewULID() ulid.ULID {
 	id, _ := ulid.New(ulid.Timestamp(time.Now()), cryptorand.Reader)
@@ -47,6 +52,7 @@ func Start(port string) {
 
 	// Homes
 	v1.POST("/homes", AddHome)
+	v1.GET("/homes", GetHomes)
 
 	e.Logger.Fatal(e.Start(":" + port))
 }

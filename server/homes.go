@@ -62,3 +62,30 @@ func AddHome(c echo.Context) error {
 		Message: homeID,
 	})
 }
+
+// GetHomes route get list of user homes
+func GetHomes(c echo.Context) error {
+	user := c.Get("user").(User)
+	var permissions []Permission
+	err := DB.Select(&permissions, "SELECT * FROM permissions WHERE type=$1 AND user_id=$2", "home", user.ID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, MessageResponse{
+			Message: "Error 2: Can't retrieve homes",
+		})
+	}
+	var homes []Home
+	for i := 0; i < len(permissions); i++ {
+		var home Home
+		err := DB.Get(&home, "SELECT * FROM homes WHERE id=$1", permissions[i].TypeID)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, MessageResponse{
+				Message: "Error 3: Can't retrieve homes",
+			})
+		}
+		homes = append(homes, home)
+	}
+
+	return c.JSON(http.StatusInternalServerError, DataReponse{
+		Data: homes,
+	})
+}
