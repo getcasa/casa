@@ -1,23 +1,49 @@
 package server
 
 import (
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	"net/http"
+	"time"
+
+	cryptorand "crypto/rand"
+
+	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
+	"github.com/oklog/ulid/v2"
 )
 
-// Start web server
-func Start() {
-	// Echo instance
+// MessageResponse define json response for API
+type MessageResponse struct {
+	Message string `json:"message"`
+}
+
+// NewULID create an ulid
+func NewULID() ulid.ULID {
+	id, _ := ulid.New(ulid.Timestamp(time.Now()), cryptorand.Reader)
+	return id
+}
+
+// Start start echo server
+func Start(port string) {
 	e := echo.New()
 
-	// Middleware
 	e.Pre(middleware.RemoveTrailingSlash())
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
+	e.Use(middleware.CORS())
 
-	// Routes
-	e.GET("/", GetDevices)
+	e.GET("/", func(c echo.Context) error {
+		return c.String(http.StatusOK, "Hello, World!")
+	})
 
-	// Start server
-	e.Logger.Fatal(e.Start(":1323"))
+	// V1
+	v1 := e.Group("/v1")
+
+	// Signup
+	v1.POST("/signup", SignUp)
+
+	// Signin
+	v1.POST("/signin", SignIn)
+
+	// Check authorization
+	v1.Use(middleware.KeyAuth(IsAuthenticated))
+
+	e.Logger.Fatal(e.Start(":" + port))
 }
