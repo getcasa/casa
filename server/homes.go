@@ -98,7 +98,12 @@ func GetHomes(c echo.Context) error {
 	var homes []homeRes
 	for rows.Next() {
 		var permission permissionHome
-		err = rows.StructScan(&permission)
+		err := rows.StructScan(&permission)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, MessageResponse{
+				Message: "Error 3: Can't retrieve homes",
+			})
+		}
 		homes = append(homes, homeRes{
 			ID:        permission.Home.ID,
 			Name:      permission.Home.Name,
@@ -114,5 +119,44 @@ func GetHomes(c echo.Context) error {
 
 	return c.JSON(http.StatusInternalServerError, DataReponse{
 		Data: homes,
+	})
+}
+
+// GetHome route get specific home with id
+func GetHome(c echo.Context) error {
+	user := c.Get("user").(User)
+
+	row := DB.QueryRowx(`
+		SELECT * FROM permissions
+		JOIN homes ON permissions.type_id = homes.id
+		WHERE type=$1 AND type_id=$2 AND user_id=$3
+	`, "home", c.Param("id"), user.ID)
+
+	if row == nil {
+		return c.JSON(http.StatusNotFound, MessageResponse{
+			Message: "Home not found",
+		})
+	}
+
+	var permission permissionHome
+	err := row.StructScan(&permission)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, MessageResponse{
+			Message: "Error 4: Can't retrieve homes",
+		})
+	}
+
+	return c.JSON(http.StatusInternalServerError, DataReponse{
+		Data: homeRes{
+			ID:        permission.Home.ID,
+			Name:      permission.Home.Name,
+			Address:   permission.Home.Address,
+			CreatedAt: permission.Home.CreatedAt,
+			Creator:   user,
+			Read:      permission.Permission.Read,
+			Write:     permission.Permission.Write,
+			Manage:    permission.Permission.Manage,
+			Admin:     permission.Permission.Admin,
+		},
 	})
 }
