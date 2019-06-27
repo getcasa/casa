@@ -37,6 +37,7 @@ type Gateway struct {
 	ID        string `db:"id"`
 	HomeID    string `db:"home_id"`
 	Name      string `db:"name"`
+	Model     string `db:"model"`
 	CreatedAt string `db:"created_at"`
 	CreatorID string `db:"creator_id"`
 }
@@ -117,6 +118,10 @@ func StartDB() {
 		log.Panic(err)
 	}
 	_, err = DB.Exec("CREATE TABLE IF NOT EXISTS tokens (id BYTEA PRIMARY KEY, user_id BYTEA, type TEXT, ip TEXT, user_agent TEXT, read INTEGER, write INTEGER, manage INTEGER, admin INTEGER, created_at TEXT, expire_at TEXT)")
+	if err != nil {
+		log.Panic(err)
+	}
+	_, err = DB.Exec("CREATE TABLE IF NOT EXISTS gateways (id BYTEA PRIMARY KEY, home_id BYTEA, name TEXT, created_at TEXT, creator_id BYTEA)")
 	if err != nil {
 		log.Panic(err)
 	}
