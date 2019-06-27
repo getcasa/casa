@@ -63,6 +63,89 @@ func AddHome(c echo.Context) error {
 	})
 }
 
+// UpdateHome route update home
+func UpdateHome(c echo.Context) error {
+	req := new(addHomeReq)
+	if err := c.Bind(req); err != nil {
+		return err
+	}
+	var missingFields []string
+	if req.Name == "" {
+		missingFields = append(missingFields, "name")
+	}
+	if req.Address == "" {
+		missingFields = append(missingFields, "address")
+	}
+	if len(missingFields) > 0 {
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Some fields missing: " + strings.Join(missingFields, ", "),
+		})
+	}
+
+	user := c.Get("user").(User)
+
+	var permission Permission
+	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "home", c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusNotFound, MessageResponse{
+			Message: "Home not found",
+		})
+	}
+
+	if permission.Manage == 0 && permission.Admin == 0 {
+		return c.JSON(http.StatusUnauthorized, MessageResponse{
+			Message: "Unauthorized modifications",
+		})
+	}
+
+	_, err = DB.Exec("UPDATE homes SET Name=$1, address=$2 WHERE id=$3", req.Name, req.Address, c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, MessageResponse{
+			Message: "Error 5: Can't update home",
+		})
+	}
+
+	return c.JSON(http.StatusOK, MessageResponse{
+		Message: "Home updated",
+	})
+}
+
+// DeleteHome route delete home
+func DeleteHome(c echo.Context) error {
+	user := c.Get("user").(User)
+
+	var permission Permission
+	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "home", c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusNotFound, MessageResponse{
+			Message: "Home not found",
+		})
+	}
+
+	if permission.Admin == 0 {
+		return c.JSON(http.StatusUnauthorized, MessageResponse{
+			Message: "Unauthorized modifications",
+		})
+	}
+
+	_, err = DB.Exec("DELETE FROM homes WHERE id=$1", c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, MessageResponse{
+			Message: "Error 6: Can't delete home",
+		})
+	}
+	_, err = DB.Exec("DELETE FROM permissions WHERE type=$1 AND type_id=$2", "home", c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, MessageResponse{
+			Message: "Error 7: Can't delete home",
+		})
+	}
+
+	return c.JSON(http.StatusOK, MessageResponse{
+		Message: "Home deleted",
+	})
+}
+
 type permissionHome struct {
 	Permission
 	Home
@@ -117,7 +200,7 @@ func GetHomes(c echo.Context) error {
 		})
 	}
 
-	return c.JSON(http.StatusInternalServerError, DataReponse{
+	return c.JSON(http.StatusOK, DataReponse{
 		Data: homes,
 	})
 }
@@ -146,7 +229,7 @@ func GetHome(c echo.Context) error {
 		})
 	}
 
-	return c.JSON(http.StatusInternalServerError, DataReponse{
+	return c.JSON(http.StatusOK, DataReponse{
 		Data: homeRes{
 			ID:        permission.Home.ID,
 			Name:      permission.Home.Name,

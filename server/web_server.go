@@ -52,6 +52,8 @@ func Start(port string) {
 
 	// Homes
 	v1.POST("/homes", AddHome)
+	v1.PUT("/homes/:id", UpdateHome)
+	v1.DELETE("/homes/:id", DeleteHome)
 	v1.GET("/homes", GetHomes)
 	v1.GET("/homes/:id", GetHome)
 
