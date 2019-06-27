@@ -53,6 +53,7 @@ func Start(port string) {
 	// Homes
 	v1.POST("/homes", AddHome)
 	v1.GET("/homes", GetHomes)
+	v1.GET("/homes/:id", GetHome)
 
 	e.Logger.Fatal(e.Start(":" + port))
 }
