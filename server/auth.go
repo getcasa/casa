@@ -169,6 +169,7 @@ func IsAuthenticated(key string, c echo.Context) (bool, error) {
 	if err != nil {
 		return false, nil
 	}
+	user.Password = ""
 	c.Set("user", user)
 
 	return true, nil
