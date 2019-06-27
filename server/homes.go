@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -63,29 +64,35 @@ func AddHome(c echo.Context) error {
 	})
 }
 
+type permissionHome struct {
+	Permission
+	Home
+}
+
 // GetHomes route get list of user homes
 func GetHomes(c echo.Context) error {
 	user := c.Get("user").(User)
-	var permissions []Permission
-	err := DB.Select(&permissions, "SELECT * FROM permissions WHERE type=$1 AND user_id=$2", "home", user.ID)
+	var permissions []permissionHome
+
+	rows, err := DB.Queryx(`
+		SELECT * FROM permissions
+		JOIN homes ON permissions.type_id = homes.id
+		WHERE type=$1 AND user_id=$2
+	`, "home", user.ID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Error 2: Can't retrieve homes",
 		})
 	}
-	var homes []Home
-	for i := 0; i < len(permissions); i++ {
-		var home Home
-		err := DB.Get(&home, "SELECT * FROM homes WHERE id=$1", permissions[i].TypeID)
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, MessageResponse{
-				Message: "Error 3: Can't retrieve homes",
-			})
-		}
-		homes = append(homes, home)
+	for rows.Next() {
+		var permission permissionHome
+		err = rows.StructScan(&permission)
+		permissions = append(permissions, permission)
 	}
 
+	fmt.Println(permissions[0])
+
 	return c.JSON(http.StatusInternalServerError, DataReponse{
-		Data: homes,
+		Data: "homes",
 	})
 }
