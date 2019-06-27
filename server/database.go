@@ -121,7 +121,7 @@ func StartDB() {
 	if err != nil {
 		log.Panic(err)
 	}
-	_, err = DB.Exec("CREATE TABLE IF NOT EXISTS gateways (id BYTEA PRIMARY KEY, home_id BYTEA, name TEXT, created_at TEXT, creator_id BYTEA)")
+	_, err = DB.Exec("CREATE TABLE IF NOT EXISTS gateways (id BYTEA PRIMARY KEY, home_id BYTEA, name TEXT, model TEXT, created_at TEXT, creator_id BYTEA)")
 	if err != nil {
 		log.Panic(err)
 	}
