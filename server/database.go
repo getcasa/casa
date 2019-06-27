@@ -12,7 +12,7 @@ type User struct {
 	Firstname string `db:"firstname" json:"firstname"`
 	Lastname  string `db:"lastname" json:"lastname"`
 	Email     string `db:"email" json:"email"`
-	Password  string `db:"password" json:"password,omitempty"`
+	Password  string `db:"password" json:"-"`
 	Birthdate string `db:"birthdate" json:"birthdate"`
 	CreatedAt string `db:"created_at" json:"createdAt"`
 }
