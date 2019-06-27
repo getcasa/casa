@@ -8,80 +8,80 @@ import (
 
 // User structure in database
 type User struct {
-	ID        string `db:"id"`
-	Firstname string `db:"firstname"`
-	Lastname  string `db:"lastname"`
-	Email     string `db:"email"`
-	Password  string `db:"password"`
-	Birthdate string `db:"birthdate"`
-	CreatedAt string `db:"created_at"`
+	ID        string `db:"id" json:"id"`
+	Firstname string `db:"firstname" json:"firstname"`
+	Lastname  string `db:"lastname" json:"lastname"`
+	Email     string `db:"email" json:"email"`
+	Password  string `db:"password" json:"password,omitempty"`
+	Birthdate string `db:"birthdate" json:"birthdate"`
+	CreatedAt string `db:"created_at" json:"createdAt"`
 }
 
 // Token structure in database
 type Token struct {
-	ID        string `db:"id"`
-	UserID    string `db:"user_id"`
-	Type      string `db:"type"`
-	IP        string `db:"ip"`
-	UserAgent string `db:"user_agent"`
-	Read      int    `db:"read"`
-	Write     int    `db:"write"`
-	Manage    int    `db:"manage"`
-	Admin     int    `db:"admin"`
-	CreatedAt string `db:"created_at"`
-	ExpireAt  string `db:"expire_at"`
+	ID        string `db:"id" json:"id"`
+	UserID    string `db:"user_id" json:"userId"`
+	Type      string `db:"type" json:"type"`
+	IP        string `db:"ip" json:"ip"`
+	UserAgent string `db:"user_agent" json:"userAgent"`
+	Read      int    `db:"read" json:"read"`
+	Write     int    `db:"write" json:"write"`
+	Manage    int    `db:"manage" json:"manage"`
+	Admin     int    `db:"admin" json:"admin"`
+	CreatedAt string `db:"created_at" json:"createdAt"`
+	ExpireAt  string `db:"expire_at" json:"expireAt"`
 }
 
 // Gateway structure in database
 type Gateway struct {
-	ID        string `db:"id"`
-	HomeID    string `db:"home_id"`
-	Name      string `db:"name"`
-	Model     string `db:"model"`
-	CreatedAt string `db:"created_at"`
-	CreatorID string `db:"creator_id"`
+	ID        string `db:"id" json:"id"`
+	HomeID    string `db:"home_id" json:"homeId"`
+	Name      string `db:"name" json:"name"`
+	Model     string `db:"model" json:"model"`
+	CreatedAt string `db:"created_at" json:"createdAt"`
+	CreatorID string `db:"creator_id" json:"creatorId"`
 }
 
 // Home structure in database
 type Home struct {
-	ID        string `db:"id"`
-	Name      string `db:"name"`
-	Address   string `db:"address"`
-	CreatedAt string `db:"created_at"`
-	CreatorID string `db:"creator_id"`
+	ID        string `db:"id" json:"id"`
+	Name      string `db:"name" json:"name"`
+	Address   string `db:"address" json:"address"`
+	CreatedAt string `db:"created_at" json:"createdAt"`
+	CreatorID string `db:"creator_id" json:"creatorId"`
 }
 
 // Room structure in database
 type Room struct {
-	ID        string `db:"id"`
-	Name      string `db:"name"`
-	HomeID    string `db:"home_id"`
-	CreatedAt string `db:"created_at"`
-	CreatorID string `db:"creator_id"`
+	ID        string `db:"id" json:"id"`
+	Name      string `db:"name" json:"name"`
+	HomeID    string `db:"home_id" json:"homeId"`
+	CreatedAt string `db:"created_at" json:"createdAt"`
+	CreatorID string `db:"creator_id" json:"creatorId"`
 }
 
 // Device structure in database
 type Device struct {
-	ID         string `db:"id"`
-	GatewayID  string `db:"gateway_id"`
-	Name       string `db:"name"`
-	PhysicalID string `db:"physical_id"`
-	RoomID     string `db:"room_id"`
-	CreatedAt  string `db:"created_at"`
-	CreatorID  string `db:"creator_id"`
+	ID         string `db:"id" json:"id"`
+	GatewayID  string `db:"gateway_id" json:"gatewayId"`
+	Name       string `db:"name" json:"name"`
+	PhysicalID string `db:"physical_id" json:"physicalId"`
+	RoomID     string `db:"room_id" json:"roomId"`
+	CreatedAt  string `db:"created_at" json:"createdAt"`
+	CreatorID  string `db:"creator_id" json:"creatorId"`
 }
 
 // Permission structure in database
 type Permission struct {
-	ID        string `db:"id"`
-	UserID    string `db:"user_id"`
-	Type      string `db:"type"`
-	TypeID    string `db:"type_id"`
-	Read      int    `db:"read"`
-	Write     int    `db:"write"`
-	Manage    int    `db:"manage"`
-	Admin     int    `db:"admin"`
-	UpdatedAt string `db:"updated_at"`
+	ID        string `db:"id" json:"id"`
+	UserID    string `db:"user_id" json:"userId"`
+	Type      string `db:"type" json:"type"`
+	TypeID    string `db:"type_id" json:"typeId"`
+	Read      int    `db:"read" json:"read"`
+	Write     int    `db:"write" json:"write"`
+	Manage    int    `db:"manage" json:"manage"`
+	Admin     int    `db:"admin" json:"admin"`
+	UpdatedAt string `db:"updated_at" json:"updatedAt"`
 }
 
 // DB define the database object
