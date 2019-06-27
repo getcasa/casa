@@ -32,6 +32,15 @@ type Token struct {
 	ExpireAt  string `db:"expire_at"`
 }
 
+// Gateway structure in database
+type Gateway struct {
+	ID        string `db:"id"`
+	HomeID    string `db:"home_id"`
+	Name      string `db:"name"`
+	CreatedAt string `db:"created_at"`
+	CreatorID string `db:"creator_id"`
+}
+
 // Home structure in database
 type Home struct {
 	ID        string `db:"id"`
@@ -53,6 +62,7 @@ type Room struct {
 // Device structure in database
 type Device struct {
 	ID         string `db:"id"`
+	GatewayID  string `db:"gateway_id"`
 	Name       string `db:"name"`
 	PhysicalID string `db:"physical_id"`
 	RoomID     string `db:"room_id"`
