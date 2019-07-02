@@ -47,6 +47,7 @@ func Start(port string) {
 	// Signin
 	v1.POST("/signin", SignIn)
 
+	// Gateway
 	v1.POST("/gateway", AddGateway)
 
 	// Check authorization
