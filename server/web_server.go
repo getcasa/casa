@@ -49,6 +49,7 @@ func Start(port string) {
 
 	// Gateway
 	v1.POST("/gateway", AddGateway)
+	v1.POST("/gateway/link", LinkGateway)
 
 	// Check authorization
 	v1.Use(middleware.KeyAuth(IsAuthenticated))
