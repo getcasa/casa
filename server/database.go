@@ -1,6 +1,7 @@
 package server
 
 import (
+	"database/sql"
 	"log"
 
 	"github.com/jmoiron/sqlx"
@@ -34,12 +35,12 @@ type Token struct {
 
 // Gateway structure in database
 type Gateway struct {
-	ID        string `db:"id" json:"id"`
-	HomeID    string `db:"home_id" json:"homeId"`
-	Name      string `db:"name" json:"name"`
-	Model     string `db:"model" json:"model"`
-	CreatedAt string `db:"created_at" json:"createdAt"`
-	CreatorID string `db:"creator_id" json:"creatorId"`
+	ID        string         `db:"id" json:"id"`
+	HomeID    sql.NullString `db:"home_id" json:"homeId"`
+	Name      sql.NullString `db:"name" json:"name"`
+	Model     string         `db:"model" json:"model"`
+	CreatedAt string         `db:"created_at" json:"createdAt"`
+	CreatorID sql.NullString `db:"creator_id" json:"creatorId"`
 }
 
 // Home structure in database

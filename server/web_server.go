@@ -47,12 +47,15 @@ func Start(port string) {
 	// Signin
 	v1.POST("/signin", SignIn)
 
+	// Check authorization
+	v1.Use(middleware.KeyAuth(IsAuthenticated))
+
 	// Gateway
 	v1.POST("/gateway", AddGateway)
 	v1.POST("/gateway/link", LinkGateway)
-
-	// Check authorization
-	v1.Use(middleware.KeyAuth(IsAuthenticated))
+	v1.PUT("/gateway/:id", UpdateGateway)
+	v1.DELETE("/gateway/:id", DeleteGateway)
+	v1.GET("/gateway/:id", GetGateway)
 
 	// Homes
 	v1.POST("/homes", AddHome)
