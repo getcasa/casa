@@ -1,6 +1,7 @@
 package server
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -226,9 +227,27 @@ func LinkGateway(c echo.Context) error {
 	})
 }
 
+type permissionGateway struct {
+	Permission
+	Gateway
+}
+
+type gatewayRes struct {
+	ID        string         `json:"id"`
+	HomeID    sql.NullString `json:"homeId"`
+	Name      sql.NullString `json:"name"`
+	Model     string         `json:"model"`
+	CreatedAt string         `json:"created_at"`
+	Creator   User           `json:"creator"`
+	Read      int            `json:"read"`
+	Write     int            `json:"write"`
+	Manage    int            `json:"manage"`
+	Admin     int            `json:"admin"`
+}
+
 // GetGateway route get specific gateway with id
 func GetGateway(c echo.Context) error {
-	// user := c.Get("user").(User)
+	user := c.Get("user").(User)
 
 	row := DB.QueryRowx(`
 		SELECT * FROM gateways
@@ -249,35 +268,41 @@ func GetGateway(c echo.Context) error {
 			Message: "Error 4: Can't retrieve gateway",
 		})
 	}
-	log.Println(gateway)
+
+	row = DB.QueryRowx(`
+		SELECT * FROM permissions
+		JOIN gateways ON permissions.type_id = gateways.home_id
+		WHERE type=$1 AND type_id=$2 AND user_id=$3
+	`, "home", gateway.HomeID, user.ID)
 
 	if row == nil {
 		return c.JSON(http.StatusNotFound, MessageResponse{
-			Message: "Home not found",
+			Message: "Gateway not found",
 		})
 	}
 
-	// var permission permissionHome
-	// err := row.StructScan(&permission)
-	// if err != nil {
-	// 	return c.JSON(http.StatusInternalServerError, MessageResponse{
-	// 		Message: "Error 4: Can't retrieve homes",
-	// 	})
-	// }
+	var permission permissionGateway
+	err = row.StructScan(&permission)
+	if err != nil {
+		log.Println(err)
+		return c.JSON(http.StatusInternalServerError, MessageResponse{
+			Message: "Error 4: Can't retrieve permigateway",
+		})
+	}
+	log.Println(permission)
 
-	// return c.JSON(http.StatusOK, DataReponse{
-	// 	Data: homeRes{
-	// 		ID:        permission.Home.ID,
-	// 		Name:      permission.Home.Name,
-	// 		Address:   permission.Home.Address,
-	// 		CreatedAt: permission.Home.CreatedAt,
-	// 		Creator:   user,
-	// 		Read:      permission.Permission.Read,
-	// 		Write:     permission.Permission.Write,
-	// 		Manage:    permission.Permission.Manage,
-	// 		Admin:     permission.Permission.Admin,
-	// 	},
-	// })
-
-	return nil
+	return c.JSON(http.StatusOK, DataReponse{
+		Data: gatewayRes{
+			ID:        permission.Gateway.ID,
+			HomeID:    permission.Gateway.HomeID,
+			Name:      permission.Gateway.Name,
+			Model:     permission.Gateway.Model,
+			CreatedAt: permission.Gateway.CreatedAt,
+			Creator:   user,
+			Read:      permission.Permission.Read,
+			Write:     permission.Permission.Write,
+			Manage:    permission.Permission.Manage,
+			Admin:     permission.Permission.Admin,
+		},
+	})
 }

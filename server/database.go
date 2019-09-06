@@ -76,7 +76,7 @@ type Device struct {
 type Permission struct {
 	ID        string `db:"id" json:"id"`
 	UserID    string `db:"user_id" json:"userId"`
-	Type      string `db:"type" json:"type"`
+	Type      string `db:"type" json:"type"` //home, room, device
 	TypeID    string `db:"type_id" json:"typeId"`
 	Read      int    `db:"read" json:"read"`
 	Write     int    `db:"write" json:"write"`
