@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -17,6 +18,7 @@ type addRoomReq struct {
 func AddRoom(c echo.Context) error {
 	req := new(addRoomReq)
 	if err := c.Bind(req); err != nil {
+		fmt.Println(err)
 		return err
 	}
 	var missingFields []string
@@ -67,6 +69,7 @@ func AddRoom(c echo.Context) error {
 func UpdateRoom(c echo.Context) error {
 	req := new(addRoomReq)
 	if err := c.Bind(req); err != nil {
+		fmt.Println(err)
 		return err
 	}
 	var missingFields []string
@@ -84,6 +87,7 @@ func UpdateRoom(c echo.Context) error {
 	var permission Permission
 	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "room", c.Param("id"))
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusNotFound, MessageResponse{
 			Message: "Room not found",
 		})
@@ -97,6 +101,7 @@ func UpdateRoom(c echo.Context) error {
 
 	_, err = DB.Exec("UPDATE rooms SET Name=$1 WHERE id=$2", req.Name, c.Param("id"))
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Error 5: Can't update room",
 		})
@@ -114,6 +119,7 @@ func DeleteRoom(c echo.Context) error {
 	var permission Permission
 	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "room", c.Param("id"))
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusNotFound, MessageResponse{
 			Message: "Room not found",
 		})
@@ -127,12 +133,14 @@ func DeleteRoom(c echo.Context) error {
 
 	_, err = DB.Exec("DELETE FROM rooms WHERE id=$1", c.Param("id"))
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Error 6: Can't delete room",
 		})
 	}
 	_, err = DB.Exec("DELETE FROM permissions WHERE type=$1 AND type_id=$2", "room", c.Param("id"))
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Error 7: Can't delete room",
 		})
@@ -170,6 +178,7 @@ func GetRooms(c echo.Context) error {
 		WHERE type=$1 AND user_id=$2
 	`, "room", user.ID)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Error 2: Can't retrieve rooms",
 		})
@@ -180,6 +189,7 @@ func GetRooms(c echo.Context) error {
 		var permission permissionRoom
 		err := rows.StructScan(&permission)
 		if err != nil {
+			fmt.Println(err)
 			return c.JSON(http.StatusInternalServerError, MessageResponse{
 				Message: "Error 3: Can't retrieve rooms",
 			})
@@ -221,6 +231,7 @@ func GetRoom(c echo.Context) error {
 	var permission permissionRoom
 	err := row.StructScan(&permission)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Error 4: Can't retrieve rooms",
 		})

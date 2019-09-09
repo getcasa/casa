@@ -39,6 +39,7 @@ func AddGateway(c echo.Context) error {
 	req := new(addGatewayReq)
 	err := c.Bind(req)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	} else if req.ID == "" {
 		return c.JSON(http.StatusBadRequest, MessageResponse{
@@ -54,6 +55,7 @@ func AddGateway(c echo.Context) error {
 	err = DB.Get(&gateway, "SELECT id FROM gateways WHERE id=$1", req.ID)
 	fmt.Println(err)
 	if err == nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{
 			Message: "ID already exists",
 		})
@@ -78,6 +80,7 @@ func UpdateGateway(c echo.Context) error {
 	id := c.Param("id")
 	req := new(updateGatewayReq)
 	if err := c.Bind(req); err != nil {
+		fmt.Println(err)
 		return err
 	}
 	var missingFields []string
@@ -93,6 +96,7 @@ func UpdateGateway(c echo.Context) error {
 	var gateway Gateway
 	err := DB.Get(&gateway, "SELECT * FROM gateways WHERE id=$1", id)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusNotFound, MessageResponse{
 			Message: "Gateway not found",
 		})
@@ -103,6 +107,7 @@ func UpdateGateway(c echo.Context) error {
 	var permission Permission
 	err = DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "home", gateway.HomeID)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusNotFound, MessageResponse{
 			Message: "Permission for gateway not found",
 		})
@@ -116,6 +121,7 @@ func UpdateGateway(c echo.Context) error {
 
 	_, err = DB.Exec("UPDATE gateways SET Name=$1 WHERE id=$2", req.Name, gateway.ID)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Error 5: Can't update Gateway",
 		})
@@ -134,6 +140,7 @@ func DeleteGateway(c echo.Context) error {
 	var gateway Gateway
 	err := DB.Get(&gateway, "SELECT * FROM gateways WHERE id=$1", id)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusNotFound, MessageResponse{
 			Message: "Gateway not found",
 		})
@@ -142,6 +149,7 @@ func DeleteGateway(c echo.Context) error {
 	var permission Permission
 	err = DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "home", gateway.HomeID)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusNotFound, MessageResponse{
 			Message: "Permission for gateway not found",
 		})
@@ -155,6 +163,7 @@ func DeleteGateway(c echo.Context) error {
 
 	_, err = DB.Exec("DELETE FROM gateways WHERE id=$1", id)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Error 6: Can't delete gateway",
 		})
@@ -172,6 +181,7 @@ func LinkGateway(c echo.Context) error {
 	req := new(linkGatewayReq)
 	err := c.Bind(req)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
@@ -194,6 +204,7 @@ func LinkGateway(c echo.Context) error {
 	var gateway Gateway
 	err = DB.Get(&gateway, "SELECT * FROM gateways WHERE id=$1 AND creator_id = '' AND home_id = ''", req.ID)
 	if err == nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{
 			Message: "Gateway already linked",
 		})
@@ -202,6 +213,7 @@ func LinkGateway(c echo.Context) error {
 	var user User
 	err = DB.Get(&user, "SELECT * FROM users WHERE ID=$1", req.User)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{
 			Message: "User " + req.User + " not found",
 		})
@@ -210,6 +222,7 @@ func LinkGateway(c echo.Context) error {
 	var home Home
 	err = DB.Get(&home, "SELECT * FROM homes WHERE ID=$1", req.HomeID)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{
 			Message: "Home " + req.HomeID + " not found",
 		})
@@ -217,6 +230,7 @@ func LinkGateway(c echo.Context) error {
 
 	_, err = DB.Exec("UPDATE gateways SET creator_id=$1, home_id=$2 WHERE id=$3", req.User, req.HomeID, req.ID)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Error 5: Can't link Gateway",
 		})
@@ -263,7 +277,7 @@ func GetGateway(c echo.Context) error {
 	var gateway Gateway
 	err := row.StructScan(&gateway)
 	if err != nil {
-		log.Println(err)
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Error 4: Can't retrieve gateway",
 		})
@@ -284,7 +298,7 @@ func GetGateway(c echo.Context) error {
 	var permission permissionGateway
 	err = row.StructScan(&permission)
 	if err != nil {
-		log.Println(err)
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Error 4: Can't retrieve permigateway",
 		})

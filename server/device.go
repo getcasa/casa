@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -20,6 +21,7 @@ type addDeviceReq struct {
 func AddDevice(c echo.Context) error {
 	req := new(addDeviceReq)
 	if err := c.Bind(req); err != nil {
+		fmt.Println(err)
 		return err
 	}
 	var missingFields []string
@@ -54,12 +56,23 @@ func AddDevice(c echo.Context) error {
 		CreatorID:  user.ID,
 	}
 	_, err := DB.NamedExec("INSERT INTO devices (id, name, room_id, gateway_id, physical_id, created_at, creator_id) VALUES (:id, :name, :room_id, :gateway_id, :physical_id, :created_at, :creator_id)", newDevice)
-	log.Println(err)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{
 			Message: "Error 2: Can't create device",
 		})
 	}
+
+	var device Device
+	err = DB.Get(&device, "SELECT * FROM devices WHERE physical_id=$1 AND gateway_id=$2", req.PhysicalID, req.GatewayID)
+	if err == nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusInternalServerError, MessageResponse{
+			Message: "Device with the same physical id already exist in this gateway",
+		})
+	}
+	log.Println(device)
+	log.Println(err)
 
 	permissionID := NewULID().String()
 	newPermission := Permission{
@@ -84,6 +97,7 @@ func AddDevice(c echo.Context) error {
 func UpdateDevice(c echo.Context) error {
 	req := new(addDeviceReq)
 	if err := c.Bind(req); err != nil {
+		fmt.Println(err)
 		return err
 	}
 	var missingFields []string
@@ -104,6 +118,7 @@ func UpdateDevice(c echo.Context) error {
 	var permission Permission
 	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "device", c.Param("id"))
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusNotFound, MessageResponse{
 			Message: "Device not found",
 		})
@@ -126,6 +141,7 @@ func UpdateDevice(c echo.Context) error {
 	request += " WHERE id=$1"
 	_, err = DB.Exec(request, c.Param("id"))
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Error 5: Can't update device",
 		})
@@ -143,6 +159,7 @@ func DeleteDevice(c echo.Context) error {
 	var permission Permission
 	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "device", c.Param("id"))
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusNotFound, MessageResponse{
 			Message: "Device not found",
 		})
@@ -156,12 +173,14 @@ func DeleteDevice(c echo.Context) error {
 
 	_, err = DB.Exec("DELETE FROM devices WHERE id=$1", c.Param("id"))
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Error 6: Can't delete device",
 		})
 	}
 	_, err = DB.Exec("DELETE FROM permissions WHERE type=$1 AND type_id=$2", "device", c.Param("id"))
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Error 7: Can't delete device",
 		})
@@ -201,6 +220,7 @@ func GetDevices(c echo.Context) error {
 		WHERE type=$1 AND user_id=$2
 	`, "device", user.ID)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Error 2: Can't retrieve devices",
 		})
@@ -211,6 +231,7 @@ func GetDevices(c echo.Context) error {
 		var permission permissionDevice
 		err := rows.StructScan(&permission)
 		if err != nil {
+			fmt.Println(err)
 			return c.JSON(http.StatusInternalServerError, MessageResponse{
 				Message: "Error 3: Can't retrieve devices",
 			})
@@ -254,6 +275,7 @@ func GetDevice(c echo.Context) error {
 	var permission permissionDevice
 	err := row.StructScan(&permission)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Error 4: Can't retrieve devices",
 		})
