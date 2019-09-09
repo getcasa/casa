@@ -73,9 +73,6 @@ func UpdateRoom(c echo.Context) error {
 	if req.Name == "" {
 		missingFields = append(missingFields, "name")
 	}
-	if req.HomeID == "" {
-		missingFields = append(missingFields, "home_id")
-	}
 	if len(missingFields) > 0 {
 		return c.JSON(http.StatusBadRequest, MessageResponse{
 			Message: "Some fields missing: " + strings.Join(missingFields, ", "),
@@ -98,7 +95,7 @@ func UpdateRoom(c echo.Context) error {
 		})
 	}
 
-	_, err = DB.Exec("UPDATE rooms SET Name=$1, HomeID=$2 WHERE id=$3", req.Name, req.HomeID, c.Param("id"))
+	_, err = DB.Exec("UPDATE rooms SET Name=$1 WHERE id=$2", req.Name, c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Error 5: Can't update room",

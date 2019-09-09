@@ -104,7 +104,7 @@ func UpdateGateway(c echo.Context) error {
 	err = DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "home", gateway.HomeID)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, MessageResponse{
-			Message: "Gateway not found",
+			Message: "Permission for gateway not found",
 		})
 	}
 
@@ -114,7 +114,7 @@ func UpdateGateway(c echo.Context) error {
 		})
 	}
 
-	_, err = DB.Exec("UPDATE gateways SET Name=$1 WHERE id=$3", req.Name, gateway.ID)
+	_, err = DB.Exec("UPDATE gateways SET Name=$1 WHERE id=$2", req.Name, gateway.ID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Error 5: Can't update Gateway",
@@ -143,7 +143,7 @@ func DeleteGateway(c echo.Context) error {
 	err = DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "home", gateway.HomeID)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, MessageResponse{
-			Message: "Gateway not found",
+			Message: "Permission for gateway not found",
 		})
 	}
 
@@ -153,7 +153,7 @@ func DeleteGateway(c echo.Context) error {
 		})
 	}
 
-	_, err = DB.Exec("DELETE FROM gateway WHERE id=$1", id)
+	_, err = DB.Exec("DELETE FROM gateways WHERE id=$1", id)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Error 6: Can't delete gateway",
@@ -163,7 +163,7 @@ func DeleteGateway(c echo.Context) error {
 	//TODO: delete device sync with gateway
 
 	return c.JSON(http.StatusOK, MessageResponse{
-		Message: "Home deleted",
+		Message: "Gateway deleted",
 	})
 }
 
@@ -192,7 +192,7 @@ func LinkGateway(c echo.Context) error {
 	}
 
 	var gateway Gateway
-	err = DB.Get(&gateway, "SELECT * FROM gateways WHERE id=$1 AND creator_id IS NULL AND home_id IS NULL", req.ID)
+	err = DB.Get(&gateway, "SELECT * FROM gateways WHERE id=$1 AND creator_id = '' AND home_id = ''", req.ID)
 	if err == nil {
 		return c.JSON(http.StatusBadRequest, MessageResponse{
 			Message: "Gateway already linked",
@@ -277,7 +277,7 @@ func GetGateway(c echo.Context) error {
 
 	if row == nil {
 		return c.JSON(http.StatusNotFound, MessageResponse{
-			Message: "Gateway not found",
+			Message: "Permission for gateway not found",
 		})
 	}
 

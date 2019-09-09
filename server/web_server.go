@@ -66,6 +66,17 @@ func Start(port string) {
 
 	// Rooms
 	v1.POST("/rooms", AddRoom)
+	v1.PUT("/rooms/:id", UpdateRoom)
+	v1.DELETE("/rooms/:id", DeleteRoom)
+	v1.GET("/rooms", GetRooms)
+	v1.GET("/rooms/:id", GetRoom)
+
+	// Devices
+	v1.POST("/devices", AddDevice)
+	v1.PUT("/devices/:id", UpdateDevice)
+	v1.DELETE("/devices/:id", DeleteDevice)
+	v1.GET("/devices", GetDevices)
+	v1.GET("/devices/:id", GetDevice)
 
 	e.Logger.Fatal(e.Start(":" + port))
 }
