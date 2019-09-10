@@ -3,7 +3,6 @@ package server
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -243,7 +242,12 @@ func LinkGateway(c echo.Context) error {
 
 type permissionGateway struct {
 	Permission
-	Gateway
+	User
+	GatewayID        string         `db:"g_id"`
+	GatewayName      sql.NullString `db:"g_name"`
+	GatewayHomeID    sql.NullString `db:"g_homeid"`
+	GatewayModel     string         `db:"g_model"`
+	GatewayCreatedAt string         `db:"g_createdat"`
 }
 
 type gatewayRes struct {
@@ -284,8 +288,10 @@ func GetGateway(c echo.Context) error {
 	}
 
 	row = DB.QueryRowx(`
-		SELECT * FROM permissions
+		SELECT permissions.*, users.*,
+		gateways.id as g_id,	gateways.name AS g_name, gateways.home_id AS g_homeid, gateways.model AS g_model, gateways.created_at AS g_createdat FROM permissions
 		JOIN gateways ON permissions.type_id = gateways.home_id
+		JOIN users ON gateways.creator_id = users.id
 		WHERE type=$1 AND type_id=$2 AND user_id=$3
 	`, "home", gateway.HomeID, user.ID)
 
@@ -300,19 +306,18 @@ func GetGateway(c echo.Context) error {
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
-			Message: "Error 4: Can't retrieve permigateway",
+			Message: "Error 5: Can't retrieve gateway",
 		})
 	}
-	log.Println(permission)
 
 	return c.JSON(http.StatusOK, DataReponse{
 		Data: gatewayRes{
-			ID:        permission.Gateway.ID,
-			HomeID:    permission.Gateway.HomeID,
-			Name:      permission.Gateway.Name,
-			Model:     permission.Gateway.Model,
-			CreatedAt: permission.Gateway.CreatedAt,
-			Creator:   user,
+			ID:        permission.GatewayID,
+			HomeID:    permission.GatewayHomeID,
+			Name:      permission.GatewayName,
+			Model:     permission.GatewayModel,
+			CreatedAt: permission.GatewayCreatedAt,
+			Creator:   permission.User,
 			Read:      permission.Permission.Read,
 			Write:     permission.Permission.Write,
 			Manage:    permission.Permission.Manage,

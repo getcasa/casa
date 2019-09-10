@@ -153,7 +153,11 @@ func DeleteRoom(c echo.Context) error {
 
 type permissionRoom struct {
 	Permission
-	Room
+	User
+	RoomID        string `db:"r_id"`
+	RoomName      string `db:"r_name"`
+	RoomHomeID    string `db:"r_homeid"`
+	RoomCreatedAt string `db:"r_createdat"`
 }
 
 type roomRes struct {
@@ -173,8 +177,10 @@ func GetRooms(c echo.Context) error {
 	user := c.Get("user").(User)
 
 	rows, err := DB.Queryx(`
-		SELECT * FROM permissions
+		SELECT permissions.*, users.*,
+		rooms.id as r_id,	rooms.name AS r_name, rooms.home_id AS r_homeid, rooms.created_at AS r_createdat FROM permissions
 		JOIN rooms ON permissions.type_id = rooms.id
+		JOIN users ON rooms.creator_id = users.id
 		WHERE type=$1 AND user_id=$2
 	`, "room", user.ID)
 	if err != nil {
@@ -195,11 +201,11 @@ func GetRooms(c echo.Context) error {
 			})
 		}
 		rooms = append(rooms, roomRes{
-			ID:        permission.Room.ID,
-			Name:      permission.Room.Name,
-			HomeID:    permission.Room.HomeID,
-			CreatedAt: permission.Room.CreatedAt,
-			Creator:   user,
+			ID:        permission.RoomID,
+			Name:      permission.RoomName,
+			HomeID:    permission.RoomHomeID,
+			CreatedAt: permission.RoomCreatedAt,
+			Creator:   permission.User,
 			Read:      permission.Permission.Read,
 			Write:     permission.Permission.Write,
 			Manage:    permission.Permission.Manage,
@@ -217,8 +223,10 @@ func GetRoom(c echo.Context) error {
 	user := c.Get("user").(User)
 
 	row := DB.QueryRowx(`
-		SELECT * FROM permissions
+		SELECT permissions.*, users.*,
+		rooms.id as r_id,	rooms.name AS r_name, rooms.home_id AS r_homeid, rooms.created_at AS r_createdat FROM permissions
 		JOIN rooms ON permissions.type_id = rooms.id
+		JOIN users ON rooms.creator_id = users.id
 		WHERE type=$1 AND type_id=$2 AND user_id=$3
 	`, "room", c.Param("id"), user.ID)
 
@@ -239,11 +247,11 @@ func GetRoom(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, DataReponse{
 		Data: roomRes{
-			ID:        permission.Room.ID,
-			Name:      permission.Room.Name,
-			HomeID:    permission.Room.HomeID,
-			CreatedAt: permission.Room.CreatedAt,
-			Creator:   user,
+			ID:        permission.RoomID,
+			Name:      permission.RoomName,
+			HomeID:    permission.RoomHomeID,
+			CreatedAt: permission.RoomCreatedAt,
+			Creator:   permission.User,
 			Read:      permission.Permission.Read,
 			Write:     permission.Permission.Write,
 			Manage:    permission.Permission.Manage,

@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -71,8 +70,6 @@ func AddDevice(c echo.Context) error {
 			Message: "Device with the same physical id already exist in this gateway",
 		})
 	}
-	log.Println(device)
-	log.Println(err)
 
 	permissionID := NewULID().String()
 	newPermission := Permission{
@@ -193,7 +190,13 @@ func DeleteDevice(c echo.Context) error {
 
 type permissionDevice struct {
 	Permission
-	Device
+	User
+	DeviceID         string `db:"d_id"`
+	DeviceName       string `db:"d_name"`
+	DeviceRoomID     string `db:"d_roomid"`
+	DeviceGatewayID  string `db:"d_gatewayid"`
+	DevicePhysicalID string `db:"d_physicalid"`
+	DeviceCreatedAt  string `db:"d_createdat"`
 }
 
 type deviceRes struct {
@@ -215,8 +218,10 @@ func GetDevices(c echo.Context) error {
 	user := c.Get("user").(User)
 
 	rows, err := DB.Queryx(`
-		SELECT * FROM permissions
+		SELECT permissions.*, users.*,
+		devices.id as d_id,	devices.name AS d_name, devices.room_id AS d_roomid, devices.gateway_id AS d_gatewayid, devices.physical_id AS d_physicalid, devices.created_at AS d_createdat FROM permissions
 		JOIN devices ON permissions.type_id = devices.id
+		JOIN users ON devices.creator_id = users.id
 		WHERE type=$1 AND user_id=$2
 	`, "device", user.ID)
 	if err != nil {
@@ -237,13 +242,13 @@ func GetDevices(c echo.Context) error {
 			})
 		}
 		devices = append(devices, deviceRes{
-			ID:         permission.Device.ID,
-			Name:       permission.Device.Name,
-			RoomID:     permission.Device.RoomID,
-			GatewayID:  permission.Device.GatewayID,
-			PhysicalID: permission.Device.PhysicalID,
-			CreatedAt:  permission.Device.CreatedAt,
-			Creator:    user,
+			ID:         permission.DeviceID,
+			Name:       permission.DeviceName,
+			RoomID:     permission.DeviceRoomID,
+			GatewayID:  permission.DeviceGatewayID,
+			PhysicalID: permission.DevicePhysicalID,
+			CreatedAt:  permission.DeviceCreatedAt,
+			Creator:    permission.User,
 			Read:       permission.Permission.Read,
 			Write:      permission.Permission.Write,
 			Manage:     permission.Permission.Manage,
@@ -261,8 +266,10 @@ func GetDevice(c echo.Context) error {
 	user := c.Get("user").(User)
 
 	row := DB.QueryRowx(`
-		SELECT * FROM permissions
+		SELECT permissions.*, users.*,
+		devices.id as d_id,	devices.name AS d_name, devices.room_id AS d_roomid, devices.gateway_id AS d_gatewayid, devices.physical_id AS d_physicalid, devices.created_at AS d_createdat FROM permissions
 		JOIN devices ON permissions.type_id = devices.id
+		JOIN users ON devices.creator_id = users.id
 		WHERE type=$1 AND type_id=$2 AND user_id=$3
 	`, "device", c.Param("id"), user.ID)
 
@@ -283,13 +290,13 @@ func GetDevice(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, DataReponse{
 		Data: deviceRes{
-			ID:         permission.Device.ID,
-			Name:       permission.Device.Name,
-			RoomID:     permission.Device.RoomID,
-			GatewayID:  permission.Device.GatewayID,
-			PhysicalID: permission.Device.PhysicalID,
-			CreatedAt:  permission.Device.CreatedAt,
-			Creator:    user,
+			ID:         permission.DeviceID,
+			Name:       permission.DeviceName,
+			RoomID:     permission.DeviceRoomID,
+			GatewayID:  permission.DeviceGatewayID,
+			PhysicalID: permission.DevicePhysicalID,
+			CreatedAt:  permission.DeviceCreatedAt,
+			Creator:    permission.User,
 			Read:       permission.Permission.Read,
 			Write:      permission.Permission.Write,
 			Manage:     permission.Permission.Manage,
