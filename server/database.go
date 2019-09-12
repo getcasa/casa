@@ -85,6 +85,19 @@ type Permission struct {
 	UpdatedAt string `db:"updated_at" json:"updatedAt"`
 }
 
+// Automation struct in database
+type Automation struct {
+	ID           string   `db:"id" json:"id"`
+	Name         string   `db:"name" json:"name"`
+	Trigger      []string `db:"trigger" json:"trigger"`
+	TriggerValue []string `db:"trigger_value" json:"triggerValue"`
+	Action       []string `db:"action" json:"action"`
+	ActionValue  []string `db:"action_value" json:"actionValue"`
+	Status       bool     `db:"status" json:"status"`
+	CreatedAt    string   `db:"created_at" json:"createdAt"`
+	CreatorID    string   `db:"creator_id" json:"creatorId"`
+}
+
 // DB define the database object
 var DB *sqlx.DB
 
@@ -139,6 +152,11 @@ func StartDB() {
 		log.Panic(err)
 	}
 	_, err = DB.Exec("CREATE TABLE IF NOT EXISTS permissions (id BYTEA PRIMARY KEY, user_id BYTEA, type TEXT, type_id BYTEA, read INTEGER, write INTEGER, manage INTEGER, admin INTEGER, updated_at TEXT)")
+	if err != nil {
+		log.Panic(err)
+	}
+
+	_, err = DB.Exec("CREATE TABLE IF NOT EXISTS automations (id BYTEA PRIMARY KEY, name TEXT, trigger TEXT[], trigger_value TEXT[], action TEXT[], action_value TEXT[], status BOOL, created_at TEXT, creator_id BYTEA)")
 	if err != nil {
 		log.Panic(err)
 	}

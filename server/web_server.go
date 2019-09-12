@@ -80,5 +80,12 @@ func Start(port string) {
 	v1.GET("/devices", GetDevices)
 	v1.GET("/devices/:id", GetDevice)
 
+	// Devices
+	v1.POST("/automations", AddAutomation)
+	// v1.PUT("/automations/:id", UpdateAutomation)
+	v1.DELETE("/automations/:id", DeleteAutomation)
+	v1.GET("/automations", GetAutomations)
+	// v1.GET("/automations/:id", getAutomation)
+
 	e.Logger.Fatal(e.Start(":" + port))
 }

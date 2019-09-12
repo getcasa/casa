@@ -16,7 +16,7 @@ type addDeviceReq struct {
 	RoomID     string
 }
 
-// AddDevice route create and add user to an device
+// AddDevice route create a device
 func AddDevice(c echo.Context) error {
 	req := new(addDeviceReq)
 	if err := c.Bind(req); err != nil {
