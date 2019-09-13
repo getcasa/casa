@@ -153,6 +153,19 @@ func DeleteAutomation(c echo.Context) error {
 	})
 }
 
+type automationStruct struct {
+	ID           string
+	Name         string
+	Trigger      []string
+	TriggerValue []string `db:"trigger_value" json:"triggerValue"`
+	Action       []string
+	ActionValue  []string `db:"action_value" json:"actionValue"`
+	Status       bool
+	CreatedAt    string `db:"created_at" json:"createdAt"`
+	CreatorID    string `db:"creator_id" json:"creatorID"`
+	User         User
+}
+
 // GetAutomations route get list of user automations
 func GetAutomations(c echo.Context) error {
 	user := c.Get("user").(User)
@@ -167,19 +180,18 @@ func GetAutomations(c echo.Context) error {
 		})
 	}
 
-	fmt.Println(rows)
-
-	var automations []Automation
+	var automations []automationStruct
 	for rows.Next() {
-		var auto Automation
-		err := rows.StructScan(&auto)
+
+		var auto automationStruct
+		err := rows.Scan(&auto.ID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerValue), pq.Array(&auto.Action), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.CreatorID)
 		if err != nil {
 			fmt.Println(err)
 			return c.JSON(http.StatusInternalServerError, MessageResponse{
 				Message: "Error 3: Can't retrieve automations",
 			})
 		}
-		automations = append(automations, Automation{
+		automations = append(automations, automationStruct{
 			ID:           auto.ID,
 			Name:         auto.Name,
 			Trigger:      auto.Trigger,
@@ -189,6 +201,7 @@ func GetAutomations(c echo.Context) error {
 			Status:       auto.Status,
 			CreatedAt:    auto.CreatedAt,
 			CreatorID:    auto.CreatorID,
+			User:         user,
 		})
 	}
 
@@ -197,46 +210,42 @@ func GetAutomations(c echo.Context) error {
 	})
 }
 
-// // GetAutomation route get specific automation with id
-// func GetAutomation(c echo.Context) error {
-// 	user := c.Get("user").(User)
+// GetAutomation route get specific automation with id
+func GetAutomation(c echo.Context) error {
 
-// 	row := DB.QueryRowx(`
-// 		SELECT permissions.*, users.*,
-// 		automations.id as d_id,	automations.name AS d_name, automations.room_id AS d_roomid, automations.gateway_id AS d_gatewayid, automations.physical_id AS d_physicalid, automations.created_at AS d_createdat FROM permissions
-// 		JOIN automations ON permissions.type_id = automations.id
-// 		JOIN users ON automations.creator_id = users.id
-// 		WHERE type=$1 AND type_id=$2 AND user_id=$3
-// 	`, "automation", c.Param("id"), user.ID)
+	user := c.Get("user").(User)
 
-// 	if row == nil {
-// 		return c.JSON(http.StatusNotFound, MessageResponse{
-// 			Message: "Automation not found",
-// 		})
-// 	}
+	row := DB.QueryRowx(`
+		SELECT * FROM automations
+		WHERE creator_id=$1 AND id=$2`, user.ID, c.Param("id"))
+	if row == nil {
+		return c.JSON(http.StatusInternalServerError, MessageResponse{
+			Message: "Automation not found",
+		})
+	}
 
-// 	var permission permissionAutomation
-// 	err := row.StructScan(&permission)
-// 	if err != nil {
-// 		fmt.Println(err)
-// 		return c.JSON(http.StatusInternalServerError, MessageResponse{
-// 			Message: "Error 4: Can't retrieve automations",
-// 		})
-// 	}
+	var auto automationStruct
+	err := row.Scan(&auto.ID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerValue), pq.Array(&auto.Action), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.CreatorID)
+	if err != nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusInternalServerError, MessageResponse{
+			Message: "Error 3: Can't retrieve automations",
+		})
+	}
 
-// 	return c.JSON(http.StatusOK, DataReponse{
-// 		Data: automationRes{
-// 			ID:         permission.AutomationID,
-// 			Name:       permission.AutomationName,
-// 			RoomID:     permission.AutomationRoomID,
-// 			GatewayID:  permission.AutomationGatewayID,
-// 			PhysicalID: permission.AutomationPhysicalID,
-// 			CreatedAt:  permission.AutomationCreatedAt,
-// 			Creator:    permission.User,
-// 			Read:       permission.Permission.Read,
-// 			Write:      permission.Permission.Write,
-// 			Manage:     permission.Permission.Manage,
-// 			Admin:      permission.Permission.Admin,
-// 		},
-// 	})
-// }
+	return c.JSON(http.StatusOK, DataReponse{
+		Data: automationStruct{
+			ID:           auto.ID,
+			Name:         auto.Name,
+			Trigger:      auto.Trigger,
+			TriggerValue: auto.TriggerValue,
+			Action:       auto.Action,
+			ActionValue:  auto.ActionValue,
+			Status:       auto.Status,
+			CreatedAt:    auto.CreatedAt,
+			CreatorID:    auto.CreatorID,
+			User:         user,
+		},
+	})
+
+}

@@ -85,7 +85,7 @@ func Start(port string) {
 	// v1.PUT("/automations/:id", UpdateAutomation)
 	v1.DELETE("/automations/:id", DeleteAutomation)
 	v1.GET("/automations", GetAutomations)
-	// v1.GET("/automations/:id", getAutomation)
+	v1.GET("/automations/:id", GetAutomation)
 
 	e.Logger.Fatal(e.Start(":" + port))
 }
