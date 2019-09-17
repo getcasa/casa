@@ -49,6 +49,7 @@ func Start(port string) {
 
 	// Link Gateway
 	v1.POST("/gateway/link", LinkGateway)
+	v1.GET("/gateway/sync/:id", SyncGateway)
 
 	// Check authorization
 	v1.Use(middleware.KeyAuth(IsAuthenticated))
@@ -82,7 +83,7 @@ func Start(port string) {
 
 	// Devices
 	v1.POST("/automations", AddAutomation)
-	// v1.PUT("/automations/:id", UpdateAutomation)
+	// v1.PUT("/automations/:id", UpdateAutomation) TODO: Do Update
 	v1.DELETE("/automations/:id", DeleteAutomation)
 	v1.GET("/automations", GetAutomations)
 	v1.GET("/automations/:id", GetAutomation)

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo"
+	"github.com/lib/pq"
 	"github.com/oklog/ulid/v2"
 )
 
@@ -234,6 +235,155 @@ func LinkGateway(c echo.Context) error {
 			Message: "Error 5: Can't link Gateway",
 		})
 	}
+
+	return c.JSON(http.StatusCreated, MessageResponse{
+		Message: "Gateway linked",
+	})
+}
+
+type syncedDatas struct {
+	Home        Home
+	Gateway     Gateway
+	Users       []User
+	Automations []Automation
+	Devices     []Device
+	Rooms       []Room
+	Permissions []Permission
+}
+
+type automationScan struct {
+	ID           string
+	Name         string
+	Trigger      []string
+	TriggerValue []string `db:"trigger_value" json:"triggerValue"`
+	Action       []string
+	ActionValue  []string `db:"action_value" json:"actionValue"`
+	Status       bool
+	CreatedAt    string `db:"created_at" json:"createdAt"`
+	CreatorID    string `db:"creator_id" json:"creatorID"`
+	HomeID       string `db:"home_id" json:"homeID"`
+}
+
+// SyncGateway sync datas with gateway
+func SyncGateway(c echo.Context) error {
+	id := c.Param("id")
+
+	var missingFields []string
+	if id == "" {
+		missingFields = append(missingFields, "id")
+	}
+	if len(missingFields) > 0 {
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Some fields missing: " + strings.Join(missingFields, ", "),
+		})
+	}
+
+	var synced syncedDatas
+	err := DB.Get(&synced.Gateway, `SELECT * FROM gateways WHERE id=$1`, id)
+	if err != nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Error 3: not found",
+		})
+	}
+
+	err = DB.Get(&synced.Home, `SELECT * FROM homes WHERE id=$1`, synced.Gateway.HomeID)
+	if err != nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Error 3: not found",
+		})
+	}
+
+	err = DB.Select(&synced.Rooms, `SELECT * FROM rooms WHERE home_id=$1`, synced.Gateway.HomeID)
+	if err != nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Error 3: not found",
+		})
+	}
+
+	err = DB.Select(&synced.Devices, `SELECT DISTINCT devices.* FROM devices JOIN rooms ON devices.room_id = rooms.id WHERE rooms.home_id = $1`, synced.Gateway.HomeID)
+	if err != nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Error 3: not found",
+		})
+	}
+
+	err = DB.Select(&synced.Permissions, `SELECT DISTINCT permissions.* FROM permissions
+	JOIN users ON permissions.user_id = users.id
+	JOIN permissions AS permi ON users.id = permi.user_id WHERE permi.type_id = $1 AND permi.type = 'home'`, synced.Gateway.HomeID)
+	if err != nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Error 3: not found",
+		})
+	}
+
+	err = DB.Select(&synced.Users, `SELECT DISTINCT users.* FROM users JOIN permissions ON users.id = permissions.user_id WHERE permissions.type_id = $1 AND permissions.type = 'home'`, synced.Gateway.HomeID)
+	if err != nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Error 3: not found",
+		})
+	}
+
+	rows, err := DB.Queryx(`SELECT * FROM automations WHERE home_id=$1`, synced.Gateway.HomeID)
+	if err != nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusInternalServerError, MessageResponse{
+			Message: "Error 2: Can't retrieve automations",
+		})
+	}
+
+	var automations []Automation
+	for rows.Next() {
+		var auto automationScan
+		err := rows.Scan(&auto.ID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerValue), pq.Array(&auto.Action), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.CreatorID, &auto.HomeID)
+		if err != nil {
+			fmt.Println(err)
+			return c.JSON(http.StatusInternalServerError, MessageResponse{
+				Message: "Error 3: Can't retrieve automations",
+			})
+		}
+		automations = append(automations, Automation{
+			ID:           auto.ID,
+			Name:         auto.Name,
+			Trigger:      auto.Trigger,
+			TriggerValue: auto.TriggerValue,
+			Action:       auto.Action,
+			ActionValue:  auto.ActionValue,
+			Status:       auto.Status,
+			CreatedAt:    auto.CreatedAt,
+			CreatorID:    auto.CreatorID,
+			HomeID:       auto.HomeID,
+		})
+	}
+
+	synced.Automations = automations
+
+	return c.JSON(http.StatusOK, DataReponse{
+		Data: synced,
+	})
+
+	// var user User
+	// err = DB.Get(&user, "SELECT * FROM users WHERE ID=$1", req.User)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return c.JSON(http.StatusBadRequest, MessageResponse{
+	// 		Message: "User " + req.User + " not found",
+	// 	})
+	// }
+
+	// var home Home
+	// err = DB.Get(&home, "SELECT * FROM homes WHERE ID=$1", req.HomeID)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return c.JSON(http.StatusBadRequest, MessageResponse{
+	// 		Message: "Home " + req.HomeID + " not found",
+	// 	})
+	// }
 
 	return c.JSON(http.StatusCreated, MessageResponse{
 		Message: "Gateway linked",
