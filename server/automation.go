@@ -68,8 +68,7 @@ func AddAutomation(c echo.Context) error {
 		CreatorID:    user.ID,
 	}
 
-	fmt.Println(pq.Array(newAutomation.Trigger))
-	_, err := DB.Query("INSERT INTO automations (id, name, trigger, trigger_value, action, action_value, status, created_at, creator_id, home_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+	_, err := DB.Exec("INSERT INTO automations (id, name, trigger, trigger_value, action, action_value, status, created_at, creator_id, home_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
 		newAutomation.ID, newAutomation.Name, pq.Array(newAutomation.Trigger), pq.Array(newAutomation.TriggerValue), pq.Array(newAutomation.Action), pq.Array(newAutomation.ActionValue), newAutomation.Status, newAutomation.CreatedAt, newAutomation.CreatorID, newAutomation.HomeID)
 	if err != nil {
 		fmt.Println(err)

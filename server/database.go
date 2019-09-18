@@ -157,7 +157,7 @@ func StartDB() {
 		log.Panic(err)
 	}
 
-	_, err = DB.Exec("CREATE TABLE IF NOT EXISTS automations (id BYTEA PRIMARY KEY, name TEXT, trigger TEXT[], trigger_value TEXT[], action TEXT[], action_value TEXT[], status BOOL, created_at TEXT, creator_id BYTEA)")
+	_, err = DB.Exec("CREATE TABLE IF NOT EXISTS automations (id BYTEA PRIMARY KEY, home_id BYTEA, name TEXT, trigger TEXT[], trigger_value TEXT[], action TEXT[], action_value TEXT[], status BOOL, created_at TEXT, creator_id BYTEA)")
 	if err != nil {
 		log.Panic(err)
 	}
