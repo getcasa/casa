@@ -25,9 +25,6 @@ func AddHome(c echo.Context) error {
 	if req.Name == "" {
 		missingFields = append(missingFields, "name")
 	}
-	if req.Address == "" {
-		missingFields = append(missingFields, "address")
-	}
 	if len(missingFields) > 0 {
 		return c.JSON(http.StatusBadRequest, MessageResponse{
 			Message: "Some fields missing: " + strings.Join(missingFields, ", "),
