@@ -88,6 +88,7 @@ type Permission struct {
 // Automation struct in database
 type Automation struct {
 	ID           string   `db:"id" json:"id"`
+	HomeID       string   `db:"home_id" json:"homeId"`
 	Name         string   `db:"name" json:"name"`
 	Trigger      []string `db:"trigger" json:"trigger"`
 	TriggerValue []string `db:"trigger_value" json:"triggerValue"`

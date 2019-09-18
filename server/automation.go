@@ -16,6 +16,7 @@ type addAutomationReq struct {
 	TriggerValue []string
 	Action       []string
 	ActionValue  []string
+	HomeID       string
 	Status       bool
 }
 
@@ -42,6 +43,9 @@ func AddAutomation(c echo.Context) error {
 	if req.ActionValue == nil {
 		missingFields = append(missingFields, "ActionValue")
 	}
+	if req.HomeID == "" {
+		missingFields = append(missingFields, "HomeID")
+	}
 	if len(missingFields) > 0 {
 		return c.JSON(http.StatusBadRequest, MessageResponse{
 			Message: "Some fields missing: " + strings.Join(missingFields, ", "),
@@ -58,13 +62,15 @@ func AddAutomation(c echo.Context) error {
 		TriggerValue: req.TriggerValue,
 		Action:       req.Action,
 		ActionValue:  req.ActionValue,
+		HomeID:       req.HomeID,
 		Status:       true,
 		CreatedAt:    time.Now().Format(time.RFC1123),
 		CreatorID:    user.ID,
 	}
 
 	fmt.Println(pq.Array(newAutomation.Trigger))
-	_, err := DB.Query("INSERT INTO automations (id, name, trigger, trigger_value, action, action_value, status, created_at, creator_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", newAutomation.ID, newAutomation.Name, pq.Array(newAutomation.Trigger), pq.Array(newAutomation.TriggerValue), pq.Array(newAutomation.Action), pq.Array(newAutomation.ActionValue), newAutomation.Status, newAutomation.CreatedAt, newAutomation.CreatorID)
+	_, err := DB.Query("INSERT INTO automations (id, name, trigger, trigger_value, action, action_value, status, created_at, creator_id, home_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+		newAutomation.ID, newAutomation.Name, pq.Array(newAutomation.Trigger), pq.Array(newAutomation.TriggerValue), pq.Array(newAutomation.Action), pq.Array(newAutomation.ActionValue), newAutomation.Status, newAutomation.CreatedAt, newAutomation.CreatorID, newAutomation.HomeID)
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{
@@ -163,6 +169,7 @@ type automationStruct struct {
 	Status       bool
 	CreatedAt    string `db:"created_at" json:"createdAt"`
 	CreatorID    string `db:"creator_id" json:"creatorID"`
+	HomeID       string `db:"home_id" json:"homeID"`
 	User         User
 }
 
@@ -184,7 +191,7 @@ func GetAutomations(c echo.Context) error {
 	for rows.Next() {
 
 		var auto automationStruct
-		err := rows.Scan(&auto.ID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerValue), pq.Array(&auto.Action), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.CreatorID)
+		err := rows.Scan(&auto.ID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerValue), pq.Array(&auto.Action), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.CreatorID, &auto.HomeID)
 		if err != nil {
 			fmt.Println(err)
 			return c.JSON(http.StatusInternalServerError, MessageResponse{
@@ -193,6 +200,7 @@ func GetAutomations(c echo.Context) error {
 		}
 		automations = append(automations, automationStruct{
 			ID:           auto.ID,
+			HomeID:       auto.HomeID,
 			Name:         auto.Name,
 			Trigger:      auto.Trigger,
 			TriggerValue: auto.TriggerValue,
@@ -225,7 +233,7 @@ func GetAutomation(c echo.Context) error {
 	}
 
 	var auto automationStruct
-	err := row.Scan(&auto.ID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerValue), pq.Array(&auto.Action), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.CreatorID)
+	err := row.Scan(&auto.ID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerValue), pq.Array(&auto.Action), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.CreatorID, &auto.HomeID)
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
@@ -236,6 +244,7 @@ func GetAutomation(c echo.Context) error {
 	return c.JSON(http.StatusOK, DataReponse{
 		Data: automationStruct{
 			ID:           auto.ID,
+			HomeID:       auto.HomeID,
 			Name:         auto.Name,
 			Trigger:      auto.Trigger,
 			TriggerValue: auto.TriggerValue,
