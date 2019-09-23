@@ -62,31 +62,31 @@ func Start(port string) {
 
 	// Homes
 	v1.POST("/homes", AddHome)
-	v1.PUT("/homes/:id", UpdateHome)
-	v1.DELETE("/homes/:id", DeleteHome)
+	v1.PUT("/homes/:homeId", UpdateHome)
+	v1.DELETE("/homes/:homeId", DeleteHome)
 	v1.GET("/homes", GetHomes)
-	v1.GET("/homes/:id", GetHome)
+	v1.GET("/homes/:homeId", GetHome)
 
 	// Rooms
-	v1.POST("/rooms", AddRoom)
-	v1.PUT("/rooms/:id", UpdateRoom)
-	v1.DELETE("/rooms/:id", DeleteRoom)
-	v1.GET("/rooms", GetRooms)
-	v1.GET("/rooms/:id", GetRoom)
+	v1.POST("/homes/:homeId/rooms", AddRoom)
+	v1.PUT("/homes/:homeId/rooms/:roomId", UpdateRoom)
+	v1.DELETE("/homes/:homeId/rooms/:roomId", DeleteRoom)
+	v1.GET("/homes/:homeId/rooms", GetRooms)
+	v1.GET("/homes/:homeId/rooms/:roomId", GetRoom)
 
 	// Devices
-	v1.POST("/devices", AddDevice)
-	v1.PUT("/devices/:id", UpdateDevice)
-	v1.DELETE("/devices/:id", DeleteDevice)
-	v1.GET("/devices", GetDevices)
-	v1.GET("/devices/:id", GetDevice)
+	v1.POST("/homes/:homeId/rooms/:roomId/devices", AddDevice)
+	v1.PUT("/homes/:homeId/rooms/:roomId/devices/:deviceId", UpdateDevice)
+	v1.DELETE("/homes/:homeId/rooms/:roomId/devices/:deviceId", DeleteDevice)
+	v1.GET("/homes/:homeId/rooms/:roomId/devices", GetDevices)
+	v1.GET("/homes/:homeId/rooms/:roomId/devices/:deviceId", GetDevice)
 
-	// Devices
-	v1.POST("/automations", AddAutomation)
+	// Automations
+	v1.POST("/homes/:homeId/automations", AddAutomation)
 	// v1.PUT("/automations/:id", UpdateAutomation) TODO: Do Update
-	v1.DELETE("/automations/:id", DeleteAutomation)
-	v1.GET("/automations", GetAutomations)
-	v1.GET("/automations/:id", GetAutomation)
+	v1.DELETE("/homes/:homeId/automations/:automationId", DeleteAutomation)
+	v1.GET("/homes/:homeId/automations", GetAutomations)
+	v1.GET("/homes/:homeId/automations/:automationId", GetAutomation)
 
 	e.Logger.Fatal(e.Start(":" + port))
 }

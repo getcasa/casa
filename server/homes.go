@@ -85,7 +85,7 @@ func UpdateHome(c echo.Context) error {
 	user := c.Get("user").(User)
 
 	var permission Permission
-	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "home", c.Param("id"))
+	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "home", c.Param("homeId"))
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusNotFound, MessageResponse{
@@ -99,7 +99,7 @@ func UpdateHome(c echo.Context) error {
 		})
 	}
 
-	_, err = DB.Exec("UPDATE homes SET Name=$1, address=$2 WHERE id=$3", req.Name, req.Address, c.Param("id"))
+	_, err = DB.Exec("UPDATE homes SET Name=$1, address=$2 WHERE id=$3", req.Name, req.Address, c.Param("homeId"))
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
@@ -117,7 +117,7 @@ func DeleteHome(c echo.Context) error {
 	user := c.Get("user").(User)
 
 	var permission Permission
-	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "home", c.Param("id"))
+	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "home", c.Param("homeId"))
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusNotFound, MessageResponse{
@@ -131,14 +131,14 @@ func DeleteHome(c echo.Context) error {
 		})
 	}
 
-	_, err = DB.Exec("DELETE FROM homes WHERE id=$1", c.Param("id"))
+	_, err = DB.Exec("DELETE FROM homes WHERE id=$1", c.Param("homeId"))
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Error 3: Can't delete home",
 		})
 	}
-	_, err = DB.Exec("DELETE FROM permissions WHERE type=$1 AND type_id=$2", "home", c.Param("id"))
+	_, err = DB.Exec("DELETE FROM permissions WHERE type=$1 AND type_id=$2", "home", c.Param("homeId"))
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
@@ -226,7 +226,7 @@ func GetHome(c echo.Context) error {
 		JOIN homes ON permissions.type_id = homes.id
 		JOIN users ON homes.creator_id = users.id
 		WHERE type=$1 AND type_id=$2 AND user_id=$3
-	`, "home", c.Param("id"), user.ID)
+	`, "home", c.Param("homeId"), user.ID)
 
 	if row == nil {
 		return c.JSON(http.StatusNotFound, MessageResponse{
