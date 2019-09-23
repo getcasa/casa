@@ -10,8 +10,7 @@ import (
 )
 
 type addRoomReq struct {
-	Name   string
-	HomeID string
+	Name string
 }
 
 // AddRoom route create and add user to an room
@@ -25,9 +24,6 @@ func AddRoom(c echo.Context) error {
 	if req.Name == "" {
 		missingFields = append(missingFields, "name")
 	}
-	if req.HomeID == "" {
-		missingFields = append(missingFields, "HomeID")
-	}
 	if len(missingFields) > 0 {
 		return c.JSON(http.StatusBadRequest, MessageResponse{
 			Message: "Some fields missing: " + strings.Join(missingFields, ", "),
@@ -40,7 +36,7 @@ func AddRoom(c echo.Context) error {
 	newRoom := Room{
 		ID:        roomID,
 		Name:      req.Name,
-		HomeID:    req.HomeID,
+		HomeID:    c.Param("homeId"),
 		CreatedAt: time.Now().Format(time.RFC1123),
 		CreatorID: user.ID,
 	}
@@ -85,7 +81,7 @@ func UpdateRoom(c echo.Context) error {
 	user := c.Get("user").(User)
 
 	var permission Permission
-	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "room", c.Param("id"))
+	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "room", c.Param("roomId"))
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusNotFound, MessageResponse{
@@ -99,7 +95,7 @@ func UpdateRoom(c echo.Context) error {
 		})
 	}
 
-	_, err = DB.Exec("UPDATE rooms SET Name=$1 WHERE id=$2", req.Name, c.Param("id"))
+	_, err = DB.Exec("UPDATE rooms SET Name=$1 WHERE id=$2", req.Name, c.Param("roomId"))
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
@@ -117,7 +113,7 @@ func DeleteRoom(c echo.Context) error {
 	user := c.Get("user").(User)
 
 	var permission Permission
-	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "room", c.Param("id"))
+	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "room", c.Param("roomId"))
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusNotFound, MessageResponse{
@@ -131,14 +127,14 @@ func DeleteRoom(c echo.Context) error {
 		})
 	}
 
-	_, err = DB.Exec("DELETE FROM rooms WHERE id=$1", c.Param("id"))
+	_, err = DB.Exec("DELETE FROM rooms WHERE id=$1", c.Param("roomId"))
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Error 6: Can't delete room",
 		})
 	}
-	_, err = DB.Exec("DELETE FROM permissions WHERE type=$1 AND type_id=$2", "room", c.Param("id"))
+	_, err = DB.Exec("DELETE FROM permissions WHERE type=$1 AND type_id=$2", "room", c.Param("roomId"))
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
@@ -228,7 +224,7 @@ func GetRoom(c echo.Context) error {
 		JOIN rooms ON permissions.type_id = rooms.id
 		JOIN users ON rooms.creator_id = users.id
 		WHERE type=$1 AND type_id=$2 AND user_id=$3
-	`, "room", c.Param("id"), user.ID)
+	`, "room", c.Param("roomId"), user.ID)
 
 	if row == nil {
 		return c.JSON(http.StatusNotFound, MessageResponse{

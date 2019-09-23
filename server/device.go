@@ -33,9 +33,6 @@ func AddDevice(c echo.Context) error {
 	if req.PhysicalID == "" {
 		missingFields = append(missingFields, "PhysicalID")
 	}
-	if req.RoomID == "" {
-		missingFields = append(missingFields, "RoomID")
-	}
 	if len(missingFields) > 0 {
 		return c.JSON(http.StatusBadRequest, MessageResponse{
 			Message: "Some fields missing: " + strings.Join(missingFields, ", "),
@@ -48,7 +45,7 @@ func AddDevice(c echo.Context) error {
 	newDevice := Device{
 		ID:         deviceID,
 		Name:       req.Name,
-		RoomID:     req.RoomID,
+		RoomID:     c.Param("roomId"),
 		GatewayID:  req.GatewayID,
 		PhysicalID: req.PhysicalID,
 		CreatedAt:  time.Now().Format(time.RFC1123),
@@ -113,7 +110,7 @@ func UpdateDevice(c echo.Context) error {
 	user := c.Get("user").(User)
 
 	var permission Permission
-	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "device", c.Param("id"))
+	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "device", c.Param("deviceId"))
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusNotFound, MessageResponse{
@@ -136,7 +133,7 @@ func UpdateDevice(c echo.Context) error {
 		request += "room_id='" + req.RoomID + "'"
 	}
 	request += " WHERE id=$1"
-	_, err = DB.Exec(request, c.Param("id"))
+	_, err = DB.Exec(request, c.Param("deviceId"))
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
@@ -154,7 +151,7 @@ func DeleteDevice(c echo.Context) error {
 	user := c.Get("user").(User)
 
 	var permission Permission
-	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "device", c.Param("id"))
+	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "device", c.Param("deviceId"))
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusNotFound, MessageResponse{
@@ -168,14 +165,14 @@ func DeleteDevice(c echo.Context) error {
 		})
 	}
 
-	_, err = DB.Exec("DELETE FROM devices WHERE id=$1", c.Param("id"))
+	_, err = DB.Exec("DELETE FROM devices WHERE id=$1", c.Param("deviceId"))
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Error 6: Can't delete device",
 		})
 	}
-	_, err = DB.Exec("DELETE FROM permissions WHERE type=$1 AND type_id=$2", "device", c.Param("id"))
+	_, err = DB.Exec("DELETE FROM permissions WHERE type=$1 AND type_id=$2", "device", c.Param("deviceId"))
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
@@ -271,7 +268,7 @@ func GetDevice(c echo.Context) error {
 		JOIN devices ON permissions.type_id = devices.id
 		JOIN users ON devices.creator_id = users.id
 		WHERE type=$1 AND type_id=$2 AND user_id=$3
-	`, "device", c.Param("id"), user.ID)
+	`, "device", c.Param("deviceId"), user.ID)
 
 	if row == nil {
 		return c.JSON(http.StatusNotFound, MessageResponse{

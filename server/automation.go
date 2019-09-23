@@ -16,7 +16,6 @@ type addAutomationReq struct {
 	TriggerValue []string
 	Action       []string
 	ActionValue  []string
-	HomeID       string
 	Status       bool
 }
 
@@ -43,9 +42,6 @@ func AddAutomation(c echo.Context) error {
 	if req.ActionValue == nil {
 		missingFields = append(missingFields, "ActionValue")
 	}
-	if req.HomeID == "" {
-		missingFields = append(missingFields, "HomeID")
-	}
 	if len(missingFields) > 0 {
 		return c.JSON(http.StatusBadRequest, MessageResponse{
 			Message: "Some fields missing: " + strings.Join(missingFields, ", "),
@@ -62,7 +58,7 @@ func AddAutomation(c echo.Context) error {
 		TriggerValue: req.TriggerValue,
 		Action:       req.Action,
 		ActionValue:  req.ActionValue,
-		HomeID:       req.HomeID,
+		HomeID:       c.Param("homeId"),
 		Status:       true,
 		CreatedAt:    time.Now().Format(time.RFC1123),
 		CreatorID:    user.ID,
@@ -105,7 +101,7 @@ func AddAutomation(c echo.Context) error {
 // 	user := c.Get("user").(User)
 
 // 	var permission Permission
-// 	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "automation", c.Param("id"))
+// 	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "automation", c.Param("automationId"))
 // 	if err != nil {
 // 		fmt.Println(err)
 // 		return c.JSON(http.StatusNotFound, MessageResponse{
@@ -128,7 +124,7 @@ func AddAutomation(c echo.Context) error {
 // 		request += "room_id='" + req.RoomID + "'"
 // 	}
 // 	request += " WHERE id=$1"
-// 	_, err = DB.Exec(request, c.Param("id"))
+// 	_, err = DB.Exec(request, c.Param("automationId"))
 // 	if err != nil {
 // 		fmt.Println(err)
 // 		return c.JSON(http.StatusInternalServerError, MessageResponse{
@@ -145,7 +141,7 @@ func AddAutomation(c echo.Context) error {
 func DeleteAutomation(c echo.Context) error {
 	user := c.Get("user").(User)
 
-	_, err := DB.Exec("DELETE FROM automations WHERE creator_id=$1 AND id=$2", user.ID, c.Param("id"))
+	_, err := DB.Exec("DELETE FROM automations WHERE creator_id=$1 AND id=$2", user.ID, c.Param("automationId"))
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
@@ -224,7 +220,7 @@ func GetAutomation(c echo.Context) error {
 
 	row := DB.QueryRowx(`
 		SELECT * FROM automations
-		WHERE creator_id=$1 AND id=$2`, user.ID, c.Param("id"))
+		WHERE creator_id=$1 AND id=$2`, user.ID, c.Param("automationId"))
 	if row == nil {
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Automation not found",
