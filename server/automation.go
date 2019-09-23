@@ -68,6 +68,25 @@ func AddAutomation(c echo.Context) error {
 		CreatorID:    user.ID,
 	}
 
+	var device Device
+	for _, trigg := range req.Trigger {
+		err := DB.Get(&device, `SELECT * FROM devices WHERE physical_id = $1`, trigg)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, MessageResponse{
+				Message: "Trigger device not found",
+			})
+		}
+	}
+
+	for _, act := range req.Action {
+		err := DB.Get(&device, `SELECT * FROM devices WHERE physical_id = $1`, act)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, MessageResponse{
+				Message: "Action device not found",
+			})
+		}
+	}
+
 	_, err := DB.Exec("INSERT INTO automations (id, name, trigger, trigger_value, action, action_value, status, created_at, creator_id, home_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
 		newAutomation.ID, newAutomation.Name, pq.Array(newAutomation.Trigger), pq.Array(newAutomation.TriggerValue), pq.Array(newAutomation.Action), pq.Array(newAutomation.ActionValue), newAutomation.Status, newAutomation.CreatedAt, newAutomation.CreatorID, newAutomation.HomeID)
 	if err != nil {
@@ -160,6 +179,7 @@ func DeleteAutomation(c echo.Context) error {
 
 type automationStruct struct {
 	ID           string
+	HomeID       string `db:"home_id" json:"homeID"`
 	Name         string
 	Trigger      []string
 	TriggerValue []string `db:"trigger_value" json:"triggerValue"`
@@ -168,7 +188,6 @@ type automationStruct struct {
 	Status       bool
 	CreatedAt    string `db:"created_at" json:"createdAt"`
 	CreatorID    string `db:"creator_id" json:"creatorID"`
-	HomeID       string `db:"home_id" json:"homeID"`
 	User         User
 }
 
@@ -190,7 +209,7 @@ func GetAutomations(c echo.Context) error {
 	for rows.Next() {
 
 		var auto automationStruct
-		err := rows.Scan(&auto.ID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerValue), pq.Array(&auto.Action), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.CreatorID, &auto.HomeID)
+		err := rows.Scan(&auto.ID, &auto.HomeID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerValue), pq.Array(&auto.Action), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.CreatorID)
 		if err != nil {
 			fmt.Println(err)
 			return c.JSON(http.StatusInternalServerError, MessageResponse{
@@ -219,7 +238,6 @@ func GetAutomations(c echo.Context) error {
 
 // GetAutomation route get specific automation with id
 func GetAutomation(c echo.Context) error {
-
 	user := c.Get("user").(User)
 
 	row := DB.QueryRowx(`

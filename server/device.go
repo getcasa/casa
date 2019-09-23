@@ -10,10 +10,12 @@ import (
 )
 
 type addDeviceReq struct {
-	GatewayID  string
-	Name       string
-	PhysicalID string
-	RoomID     string
+	GatewayID    string
+	Name         string
+	PhysicalID   string
+	PhysicalName string
+	RoomID       string
+	Plugin       string
 }
 
 // AddDevice route create a device
@@ -33,8 +35,14 @@ func AddDevice(c echo.Context) error {
 	if req.PhysicalID == "" {
 		missingFields = append(missingFields, "PhysicalID")
 	}
+	if req.PhysicalName == "" {
+		missingFields = append(missingFields, "PhysicalName")
+	}
 	if req.RoomID == "" {
 		missingFields = append(missingFields, "RoomID")
+	}
+	if req.Plugin == "" {
+		missingFields = append(missingFields, "Plugin")
 	}
 	if len(missingFields) > 0 {
 		return c.JSON(http.StatusBadRequest, MessageResponse{
@@ -46,28 +54,31 @@ func AddDevice(c echo.Context) error {
 
 	deviceID := NewULID().String()
 	newDevice := Device{
-		ID:         deviceID,
-		Name:       req.Name,
-		RoomID:     req.RoomID,
-		GatewayID:  req.GatewayID,
-		PhysicalID: req.PhysicalID,
-		CreatedAt:  time.Now().Format(time.RFC1123),
-		CreatorID:  user.ID,
-	}
-	_, err := DB.NamedExec("INSERT INTO devices (id, name, room_id, gateway_id, physical_id, created_at, creator_id) VALUES (:id, :name, :room_id, :gateway_id, :physical_id, :created_at, :creator_id)", newDevice)
-	if err != nil {
-		fmt.Println(err)
-		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: "Error 2: Can't create device",
-		})
+		ID:           deviceID,
+		Name:         req.Name,
+		RoomID:       req.RoomID,
+		GatewayID:    req.GatewayID,
+		PhysicalID:   req.PhysicalID,
+		PhysicalName: req.PhysicalName,
+		Plugin:       req.Plugin,
+		CreatedAt:    time.Now().Format(time.RFC1123),
+		CreatorID:    user.ID,
 	}
 
 	var device Device
-	err = DB.Get(&device, "SELECT * FROM devices WHERE physical_id=$1 AND gateway_id=$2", req.PhysicalID, req.GatewayID)
+	err := DB.Get(&device, "SELECT * FROM devices WHERE physical_id=$1 AND gateway_id=$2", req.PhysicalID, req.GatewayID)
 	if err == nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Device with the same physical id already exist in this gateway",
+		})
+	}
+
+	_, err = DB.NamedExec("INSERT INTO devices (id, name, room_id, gateway_id, physical_id, physical_name, plugin, created_at, creator_id) VALUES (:id, :name, :room_id, :gateway_id, :physical_id, :physical_name, :plugin, :created_at, :creator_id)", newDevice)
+	if err != nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Error 2: Can't create device",
 		})
 	}
 
@@ -191,26 +202,28 @@ func DeleteDevice(c echo.Context) error {
 type permissionDevice struct {
 	Permission
 	User
-	DeviceID         string `db:"d_id"`
-	DeviceName       string `db:"d_name"`
-	DeviceRoomID     string `db:"d_roomid"`
-	DeviceGatewayID  string `db:"d_gatewayid"`
-	DevicePhysicalID string `db:"d_physicalid"`
-	DeviceCreatedAt  string `db:"d_createdat"`
+	DeviceID           string `db:"d_id"`
+	DeviceName         string `db:"d_name"`
+	DeviceRoomID       string `db:"d_roomid"`
+	DeviceGatewayID    string `db:"d_gatewayid"`
+	DevicePhysicalID   string `db:"d_physicalid"`
+	DevicePhysicalName string `db:"d_physicalname"`
+	DeviceCreatedAt    string `db:"d_createdat"`
 }
 
 type deviceRes struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	RoomID     string `json:"room_id"`
-	GatewayID  string `json:"gatewayId"`
-	PhysicalID string `json:"physicalId"`
-	CreatedAt  string `json:"created_at"`
-	Creator    User   `json:"creator"`
-	Read       int    `json:"read"`
-	Write      int    `json:"write"`
-	Manage     int    `json:"manage"`
-	Admin      int    `json:"admin"`
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	RoomID       string `json:"room_id"`
+	GatewayID    string `json:"gatewayId"`
+	PhysicalID   string `json:"physicalId"`
+	PhysicalName string `json:"physicalName"`
+	CreatedAt    string `json:"created_at"`
+	Creator      User   `json:"creator"`
+	Read         int    `json:"read"`
+	Write        int    `json:"write"`
+	Manage       int    `json:"manage"`
+	Admin        int    `json:"admin"`
 }
 
 // GetDevices route get list of user devices
@@ -219,7 +232,7 @@ func GetDevices(c echo.Context) error {
 
 	rows, err := DB.Queryx(`
 		SELECT permissions.*, users.*,
-		devices.id as d_id,	devices.name AS d_name, devices.room_id AS d_roomid, devices.gateway_id AS d_gatewayid, devices.physical_id AS d_physicalid, devices.created_at AS d_createdat FROM permissions
+		devices.id as d_id,	devices.name AS d_name, devices.room_id AS d_roomid, devices.gateway_id AS d_gatewayid, devices.physical_id AS d_physicalid, , devices.physical_name AS d_physicalname, devices.plugin AS d_plugin, devices.created_at AS d_createdat FROM permissions
 		JOIN devices ON permissions.type_id = devices.id
 		JOIN users ON devices.creator_id = users.id
 		WHERE type=$1 AND user_id=$2
@@ -242,17 +255,18 @@ func GetDevices(c echo.Context) error {
 			})
 		}
 		devices = append(devices, deviceRes{
-			ID:         permission.DeviceID,
-			Name:       permission.DeviceName,
-			RoomID:     permission.DeviceRoomID,
-			GatewayID:  permission.DeviceGatewayID,
-			PhysicalID: permission.DevicePhysicalID,
-			CreatedAt:  permission.DeviceCreatedAt,
-			Creator:    permission.User,
-			Read:       permission.Permission.Read,
-			Write:      permission.Permission.Write,
-			Manage:     permission.Permission.Manage,
-			Admin:      permission.Permission.Admin,
+			ID:           permission.DeviceID,
+			Name:         permission.DeviceName,
+			RoomID:       permission.DeviceRoomID,
+			GatewayID:    permission.DeviceGatewayID,
+			PhysicalID:   permission.DevicePhysicalID,
+			PhysicalName: permission.DeviceName,
+			CreatedAt:    permission.DeviceCreatedAt,
+			Creator:      permission.User,
+			Read:         permission.Permission.Read,
+			Write:        permission.Permission.Write,
+			Manage:       permission.Permission.Manage,
+			Admin:        permission.Permission.Admin,
 		})
 	}
 
@@ -267,7 +281,7 @@ func GetDevice(c echo.Context) error {
 
 	row := DB.QueryRowx(`
 		SELECT permissions.*, users.*,
-		devices.id as d_id,	devices.name AS d_name, devices.room_id AS d_roomid, devices.gateway_id AS d_gatewayid, devices.physical_id AS d_physicalid, devices.created_at AS d_createdat FROM permissions
+		devices.id as d_id,	devices.name AS d_name, devices.room_id AS d_roomid, devices.gateway_id AS d_gatewayid, devices.physical_id AS d_physicalid, devices.physical_name AS d_physicalname, devices.plugin AS d_plugin, devices.created_at AS d_createdat FROM permissions
 		JOIN devices ON permissions.type_id = devices.id
 		JOIN users ON devices.creator_id = users.id
 		WHERE type=$1 AND type_id=$2 AND user_id=$3
@@ -290,17 +304,18 @@ func GetDevice(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, DataReponse{
 		Data: deviceRes{
-			ID:         permission.DeviceID,
-			Name:       permission.DeviceName,
-			RoomID:     permission.DeviceRoomID,
-			GatewayID:  permission.DeviceGatewayID,
-			PhysicalID: permission.DevicePhysicalID,
-			CreatedAt:  permission.DeviceCreatedAt,
-			Creator:    permission.User,
-			Read:       permission.Permission.Read,
-			Write:      permission.Permission.Write,
-			Manage:     permission.Permission.Manage,
-			Admin:      permission.Permission.Admin,
+			ID:           permission.DeviceID,
+			Name:         permission.DeviceName,
+			RoomID:       permission.DeviceRoomID,
+			GatewayID:    permission.DeviceGatewayID,
+			PhysicalID:   permission.DevicePhysicalID,
+			PhysicalName: permission.DeviceName,
+			CreatedAt:    permission.DeviceCreatedAt,
+			Creator:      permission.User,
+			Read:         permission.Permission.Read,
+			Write:        permission.Permission.Write,
+			Manage:       permission.Permission.Manage,
+			Admin:        permission.Permission.Admin,
 		},
 	})
 }
