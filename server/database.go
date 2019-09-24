@@ -56,6 +56,7 @@ type Home struct {
 type Room struct {
 	ID        string `db:"id" json:"id"`
 	Name      string `db:"name" json:"name"`
+	Icon      string `db:"icon" json:"icon"`
 	HomeID    string `db:"home_id" json:"homeId"`
 	CreatedAt string `db:"created_at" json:"createdAt"`
 	CreatorID string `db:"creator_id" json:"creatorId"`
@@ -146,7 +147,7 @@ func StartDB() {
 	if err != nil {
 		log.Panic(err)
 	}
-	_, err = DB.Exec("CREATE TABLE IF NOT EXISTS rooms (id BYTEA PRIMARY KEY, name TEXT, home_id BYTEA, created_at TEXT, creator_id BYTEA)")
+	_, err = DB.Exec("CREATE TABLE IF NOT EXISTS rooms (id BYTEA PRIMARY KEY, name TEXT, icon TEXT, home_id BYTEA, created_at TEXT, creator_id BYTEA)")
 	if err != nil {
 		log.Panic(err)
 	}
