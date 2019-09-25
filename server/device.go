@@ -61,20 +61,21 @@ func AddDevice(c echo.Context) error {
 		CreatedAt:    time.Now().Format(time.RFC1123),
 		CreatorID:    user.ID,
 	}
-	_, err := DB.NamedExec("INSERT INTO devices (id, name, room_id, gateway_id, physical_id, physical_name, plugin, created_at, creator_id) VALUES (:id, :name, :room_id, :gateway_id, :physical_id, :physical_name, :plugin, :created_at, :creator_id)", newDevice)
-	if err != nil {
-		fmt.Println(err)
-		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: "Error 2: Can't create device",
-		})
-	}
 
 	var device Device
-	err = DB.Get(&device, "SELECT * FROM devices WHERE physical_id=$1 AND gateway_id=$2", req.PhysicalID, req.GatewayID)
+	err := DB.Get(&device, "SELECT * FROM devices WHERE physical_id=$1 AND gateway_id=$2", req.PhysicalID, req.GatewayID)
 	if err == nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Device with the same physical id already exist in this gateway",
+		})
+	}
+
+	_, err = DB.NamedExec("INSERT INTO devices (id, name, room_id, gateway_id, physical_id, physical_name, plugin, created_at, creator_id) VALUES (:id, :name, :room_id, :gateway_id, :physical_id, :physical_name, :plugin, :created_at, :creator_id)", newDevice)
+	if err != nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Error 2: Can't create device",
 		})
 	}
 
