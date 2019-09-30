@@ -69,6 +69,7 @@ func Start(port string) {
 
 	// Members
 	v1.GET("/homes/:homeId/members", GetMembers)
+	v1.POST("/homes/:homeId/members", AddMember, hasAdminPermission)
 
 	// Rooms
 	v1.POST("/homes/:homeId/rooms", AddRoom)

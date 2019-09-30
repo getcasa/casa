@@ -3,6 +3,8 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/labstack/echo"
 )
@@ -65,5 +67,72 @@ func GetMembers(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, DataReponse{
 		Data: members,
+	})
+}
+
+type addMemberReq struct {
+	Email string
+}
+
+// AddMember route create a new permission to authorize an user
+func AddMember(c echo.Context) error {
+	req := new(addMemberReq)
+	if err := c.Bind(req); err != nil {
+		fmt.Println(err)
+		return err
+	}
+	var missingFields []string
+	if req.Email == "" {
+		missingFields = append(missingFields, "email")
+	}
+	if len(missingFields) > 0 {
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Some fields missing: " + strings.Join(missingFields, ", "),
+		})
+	}
+
+	row := DB.QueryRowx(`
+		SELECT * FROM users WHERE email=$1
+	`, req.Email)
+
+	if row == nil {
+		return c.JSON(http.StatusNotFound, MessageResponse{
+			Message: "Error 3: User not found",
+		})
+	}
+
+	var reqUser User
+	err := row.StructScan(&reqUser)
+	if err != nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusInternalServerError, MessageResponse{
+			Message: "Error 4: Can't retrieve user",
+		})
+	}
+
+	row = DB.QueryRowx(`
+		SELECT * FROM permissions WHERE user_id=$1 AND type_id=$2
+	`, reqUser.ID, c.Param("homeId"))
+
+	if row != nil {
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: reqUser.Firstname + " was already added to your home",
+		})
+	}
+
+	permissionID := NewULID().String()
+	_, err = DB.Exec(`
+		INSERT INTO permissions (id, user_id, type, type_id, read, write, manage, admin, updated_at) 
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`, permissionID, reqUser.ID, "home", c.Param("homeId"), 1, 0, 0, 0, time.Now().Format(time.RFC1123))
+	if err != nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusInternalServerError, MessageResponse{
+			Message: "Error 5: Can't add user to your home",
+		})
+	}
+
+	return c.JSON(http.StatusCreated, MessageResponse{
+		Message: reqUser.Firstname + " has been added to your home",
 	})
 }
