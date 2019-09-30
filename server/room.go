@@ -159,7 +159,7 @@ type permissionRoom struct {
 type roomRes struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
-	HomeID    string `json:"Home_id"`
+	HomeID    string `json:"home_id"`
 	CreatedAt string `json:"created_at"`
 	Creator   User   `json:"creator"`
 	Read      int    `json:"read"`
@@ -177,8 +177,8 @@ func GetRooms(c echo.Context) error {
 		rooms.id as r_id,	rooms.name AS r_name, rooms.home_id AS r_homeid, rooms.created_at AS r_createdat FROM permissions
 		JOIN rooms ON permissions.type_id = rooms.id
 		JOIN users ON rooms.creator_id = users.id
-		WHERE type=$1 AND user_id=$2
-	`, "room", user.ID)
+		WHERE type=$1 AND user_id=$2 AND rooms.home_id=$3
+	`, "room", user.ID, c.Param("homeId"))
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{

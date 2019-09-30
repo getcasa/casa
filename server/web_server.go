@@ -67,6 +67,9 @@ func Start(port string) {
 	v1.GET("/homes", GetHomes)
 	v1.GET("/homes/:homeId", GetHome)
 
+	// Members
+	v1.GET("/homes/:homeId/members", GetMembers)
+
 	// Rooms
 	v1.POST("/homes/:homeId/rooms", AddRoom)
 	v1.PUT("/homes/:homeId/rooms/:roomId", UpdateRoom)
