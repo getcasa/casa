@@ -12,8 +12,8 @@ func hasPermission(next echo.HandlerFunc, permissionType string, read, write, ma
 		reqUser := c.Get("user").(User)
 
 		row := DB.QueryRowx(`
-			SELECT * FROM permissions WHERE user_id=$1 AND type=$2
-		`, reqUser.ID, permissionType)
+			SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3
+		`, reqUser.ID, permissionType, c.Param(permissionType+"Id"))
 
 		if row == nil {
 			return c.JSON(http.StatusUnauthorized, MessageResponse{
