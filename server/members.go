@@ -128,12 +128,27 @@ func AddMember(c echo.Context) error {
 
 // removeMember route remove a member to an home
 func removeMember(c echo.Context) error {
-	var reqUser User
-	err := DB.QueryRowx("SELECT * FROM users WHERE id=$1", c.Param("userId")).StructScan(&reqUser)
+	var reqHome Home
+	err := DB.QueryRowx("SELECT * FROM homes WHERE id=$1", c.Param("homeId")).StructScan(&reqHome)
 
 	if err != nil {
 		return c.JSON(http.StatusNotFound, MessageResponse{
 			Message: "User not found",
+		})
+	}
+
+	var reqUser User
+	err = DB.QueryRowx("SELECT * FROM users WHERE id=$1", c.Param("userId")).StructScan(&reqUser)
+
+	if err != nil {
+		return c.JSON(http.StatusNotFound, MessageResponse{
+			Message: "User not found",
+		})
+	}
+
+	if reqHome.CreatorID == reqUser.ID {
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Can't remove home's creator",
 		})
 	}
 
