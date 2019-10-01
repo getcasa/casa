@@ -239,7 +239,7 @@ func GetDevices(c echo.Context) error {
 		devices.id as d_id,	devices.name AS d_name, devices.room_id AS d_roomid, devices.gateway_id AS d_gatewayid, devices.physical_id AS d_physicalid, , devices.physical_name AS d_physicalname, devices.plugin AS d_plugin, devices.created_at AS d_createdat FROM permissions
 		JOIN devices ON permissions.type_id = devices.id
 		JOIN users ON devices.creator_id = users.id
-		WHERE type=$1 AND user_id=$2
+		WHERE type=$1 AND user_id=$2 AND (permissions.read=1 OR permissions.admin=1)
 	`, "device", user.ID)
 	if err != nil {
 		fmt.Println(err)

@@ -177,7 +177,7 @@ func GetRooms(c echo.Context) error {
 		rooms.id as r_id,	rooms.name AS r_name, rooms.home_id AS r_homeid, rooms.created_at AS r_createdat FROM permissions
 		JOIN rooms ON permissions.type_id = rooms.id
 		JOIN users ON rooms.creator_id = users.id
-		WHERE type=$1 AND user_id=$2 AND rooms.home_id=$3
+		WHERE type=$1 AND user_id=$2 AND rooms.home_id=$3 AND (permissions.read=1 OR permissions.admin=1)
 	`, "room", user.ID, c.Param("homeId"))
 	if err != nil {
 		fmt.Println(err)
