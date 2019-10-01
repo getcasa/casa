@@ -136,5 +136,8 @@ func Start(port string) {
 		return hasPermission(next, "home", 1, 0, 0, 0)
 	})
 
+	// Users
+	v1.GET("/users/:userId", GetUser)
+
 	e.Logger.Fatal(e.Start(":" + port))
 }
