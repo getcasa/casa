@@ -62,35 +62,82 @@ func Start(port string) {
 
 	// Homes
 	v1.POST("/homes", AddHome)
-	v1.PUT("/homes/:homeId", UpdateHome)
-	v1.DELETE("/homes/:homeId", DeleteHome)
+	v1.PUT("/homes/:homeId", UpdateHome, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "home", 0, 0, 1, 0)
+	})
+	v1.DELETE("/homes/:homeId", DeleteHome, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "home", 0, 0, 0, 1)
+	})
 	v1.GET("/homes", GetHomes)
-	v1.GET("/homes/:homeId", GetHome)
+	v1.GET("/homes/:homeId", GetHome, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "home", 1, 0, 0, 0)
+	})
 
 	// Members
-	v1.GET("/homes/:homeId/members", GetMembers)
-	v1.POST("/homes/:homeId/members", AddMember)
+	v1.GET("/homes/:homeId/members", GetMembers, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "home", 1, 0, 0, 0)
+	})
+	v1.POST("/homes/:homeId/members", AddMember, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "home", 0, 0, 1, 0)
+	})
+	v1.DELETE("/homes/:homeId/members/:userId", removeMember, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "home", 0, 0, 1, 0)
+	})
 
 	// Rooms
-	v1.POST("/homes/:homeId/rooms", AddRoom)
-	v1.PUT("/homes/:homeId/rooms/:roomId", UpdateRoom)
-	v1.DELETE("/homes/:homeId/rooms/:roomId", DeleteRoom)
-	v1.GET("/homes/:homeId/rooms", GetRooms)
-	v1.GET("/homes/:homeId/rooms/:roomId", GetRoom)
+	v1.POST("/homes/:homeId/rooms", AddRoom, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "home", 0, 0, 1, 0)
+	})
+	v1.PUT("/homes/:homeId/rooms/:roomId", UpdateRoom, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "room", 0, 0, 1, 0)
+	})
+	v1.DELETE("/homes/:homeId/rooms/:roomId", DeleteRoom, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "room", 0, 0, 0, 1)
+	})
+	v1.GET("/homes/:homeId/rooms", GetRooms, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "home", 1, 0, 0, 0)
+	})
+	v1.GET("/homes/:homeId/rooms/:roomId", GetRoom, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "room", 1, 0, 0, 0)
+	})
 
 	// Devices
-	v1.POST("/homes/:homeId/rooms/:roomId/devices", AddDevice)
-	v1.PUT("/homes/:homeId/rooms/:roomId/devices/:deviceId", UpdateDevice)
-	v1.DELETE("/homes/:homeId/rooms/:roomId/devices/:deviceId", DeleteDevice)
-	v1.GET("/homes/:homeId/rooms/:roomId/devices", GetDevices)
-	v1.GET("/homes/:homeId/rooms/:roomId/devices/:deviceId", GetDevice)
+	v1.POST("/homes/:homeId/rooms/:roomId/devices", AddDevice, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "room", 0, 0, 1, 0)
+	})
+	v1.PUT("/homes/:homeId/rooms/:roomId/devices/:deviceId", UpdateDevice, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "device", 0, 0, 1, 0)
+	})
+	v1.DELETE("/homes/:homeId/rooms/:roomId/devices/:deviceId", DeleteDevice, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "device", 0, 0, 0, 1)
+	})
+	v1.GET("/homes/:homeId/rooms/:roomId/devices", GetDevices, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "room", 1, 0, 0, 0)
+	})
+	v1.GET("/homes/:homeId/rooms/:roomId/devices/:deviceId", GetDevice, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "device", 1, 0, 0, 0)
+	})
 
 	// Automations
-	v1.POST("/homes/:homeId/automations", AddAutomation)
-	// v1.PUT("/automations/:id", UpdateAutomation) TODO: Do Update
-	v1.DELETE("/homes/:homeId/automations/:automationId", DeleteAutomation)
-	v1.GET("/homes/:homeId/automations", GetAutomations)
-	v1.GET("/homes/:homeId/automations/:automationId", GetAutomation)
+	v1.POST("/homes/:homeId/automations", AddAutomation, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "home", 0, 1, 0, 0)
+	})
+	// TODO: Do Update
+	// v1.PUT("/homes/:homeId/automations/:automationId", UpdateAutomation, func(next echo.HandlerFunc) echo.HandlerFunc {
+	// 	return hasPermission(next, "home", 0, 1, 0, 0)
+	// })
+	v1.DELETE("/homes/:homeId/automations/:automationId", DeleteAutomation, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "home", 0, 0, 1, 0)
+	})
+	v1.GET("/homes/:homeId/automations", GetAutomations, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "home", 1, 0, 0, 0)
+	})
+	v1.GET("/homes/:homeId/automations/:automationId", GetAutomation, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "home", 1, 0, 0, 0)
+	})
+
+	// Users
+	v1.GET("/users/:userId", GetUser)
 
 	e.Logger.Fatal(e.Start(":" + port))
 }
