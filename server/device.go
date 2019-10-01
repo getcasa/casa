@@ -79,14 +79,6 @@ func AddDevice(c echo.Context) error {
 		})
 	}
 
-	_, err = DB.NamedExec("INSERT INTO devices (id, name, room_id, gateway_id, physical_id, physical_name, plugin, created_at, creator_id) VALUES (:id, :name, :room_id, :gateway_id, :physical_id, :physical_name, :plugin, :created_at, :creator_id)", newDevice)
-	if err != nil {
-		fmt.Println(err)
-		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: "Error 2: Can't create device",
-		})
-	}
-
 	permissionID := NewULID().String()
 	newPermission := Permission{
 		ID:        permissionID,

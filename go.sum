@@ -1,4 +1,6 @@
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
+github.com/amoinier/yeelight v0.0.0-20180115094350-f75f54420243 h1:ZiKBAxDt/aE0HdUCTqFmQ6z2dVA2LM/H0OLglCRmnFY=
+github.com/amoinier/yeelight v0.0.0-20180115094350-f75f54420243/go.mod h1:VPq6ZUTFIMeyF22k9dIsDY9osEK8oKAZOss7KGL5IfU=
 github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6/go.mod h1:grANhF5doyWs3UAsr3K4I6qtAmlQcZDesFNEHPZAzj8=
 github.com/cespare/reflex v0.2.0 h1:6d9WpWJseKjJvZEevKP7Pk42nPx2+BUTqmhNk8wZPwM=
 github.com/cespare/reflex v0.2.0/go.mod h1:ooqOLJ4algvHP/oYvKWfWJ9tFUzCLDk5qkIJduMYrgI=

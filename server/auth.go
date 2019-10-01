@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
@@ -83,7 +84,6 @@ func SignUp(c echo.Context) error {
 	}
 
 	newUser := User{
-		ID:        NewULID().String(),
 		Email:     req.Email,
 		Password:  string(hashedPassword),
 		Firstname: req.Firstname,
@@ -91,7 +91,7 @@ func SignUp(c echo.Context) error {
 		Birthdate: req.Birthdate,
 		CreatedAt: time.Now().Format(time.RFC1123),
 	}
-	DB.NamedExec("INSERT INTO users (id, email, password, firstname, lastname, birthdate, created_at) VALUES (:id, :email, :password, :firstname, :lastname, :birthdate, :created_at)", newUser)
+	DB.NamedExec("INSERT INTO users (id, email, password, firstname, lastname, birthdate, created_at) VALUES (generate_ulid(), :email, :password, :firstname, :lastname, :birthdate, :created_at)", newUser)
 
 	return c.JSON(http.StatusCreated, MessageResponse{
 		Message: "Account created",
@@ -125,23 +125,23 @@ func SignIn(c echo.Context) error {
 		})
 	}
 
-	id := NewULID().String()
-	createdAt := time.Now()
-
-	newToken := Token{
-		ID:        id,
-		UserID:    user.ID,
-		Type:      "signin",
-		IP:        c.RealIP(),
-		UserAgent: c.Request().UserAgent(),
-		Read:      1,
-		Write:     1,
-		Manage:    1,
-		Admin:     1,
-		CreatedAt: createdAt.Format(time.RFC1123),
-		ExpireAt:  createdAt.AddDate(0, 1, 0).Format(time.RFC1123),
+	row, err := DB.Query("INSERT INTO tokens (id, user_id, type, ip, user_agent, read, write, manage, admin) VALUES (generate_ulid(), $1, $2, $3, $4, $5, $6, $7, $8) RETURNING id;",
+		user.ID, "signin", c.RealIP(), c.Request().UserAgent(), 1, 1, 1, 1)
+	if err != nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Error 1: Token can't be create",
+		})
 	}
-	DB.NamedExec("INSERT INTO tokens (id, user_id, type, ip, user_agent, read, write, manage, admin, created_at, expire_at) VALUES (:id, :user_id, :type, :ip, :user_agent, :read, :write, :manage, :admin, :created_at, :expire_at)", newToken)
+	var id string
+	row.Next()
+	err = row.Scan(&id)
+	if err != nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Error 2: Token can't be create",
+		})
+	}
 
 	return c.JSON(http.StatusOK, MessageResponse{
 		Message: id,
