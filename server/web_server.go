@@ -69,7 +69,9 @@ func Start(port string) {
 
 	// Members
 	v1.GET("/homes/:homeId/members", GetMembers)
-	v1.POST("/homes/:homeId/members", AddMember)
+	v1.POST("/homes/:homeId/members", AddMember, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "home", 0, 0, 1, 0)
+	})
 
 	// Rooms
 	v1.POST("/homes/:homeId/rooms", AddRoom)

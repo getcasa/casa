@@ -76,13 +76,6 @@ type addMemberReq struct {
 
 // AddMember route create a new permission to authorize an user
 func AddMember(c echo.Context) error {
-	hasPermission := hasPermission(c, "home", 0, 0, 1, 0)
-	if hasPermission == false {
-		return c.JSON(http.StatusUnauthorized, MessageResponse{
-			Message: "Unauthorized",
-		})
-	}
-
 	req := new(addMemberReq)
 	if err := c.Bind(req); err != nil {
 		fmt.Println(err)
