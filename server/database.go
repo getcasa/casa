@@ -131,21 +131,6 @@ func InitDB() {
 		log.Panic(err)
 	}
 
-	_, err = db.Exec(`
-	CREATE EXTENSION moddatetime;
-	CREATE TRIGGER update_date_users BEFORE UPDATE ON users FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
-	CREATE TRIGGER update_date_tokens BEFORE UPDATE ON tokens FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
-	CREATE TRIGGER update_date_homes BEFORE UPDATE ON homes FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
-	CREATE TRIGGER update_date_gateways BEFORE UPDATE ON gateways FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
-	CREATE TRIGGER update_date_rooms BEFORE UPDATE ON rooms FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
-	CREATE TRIGGER update_date_devices BEFORE UPDATE ON devices FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
-	CREATE TRIGGER update_date_permissions BEFORE UPDATE ON permissions FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
-	CREATE TRIGGER update_date_automations BEFORE UPDATE ON automations FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
-	`)
-	if err != nil {
-		log.Panic(err)
-	}
-
 	resp, err := http.Get("https://raw.githubusercontent.com/geckoboard/pgulid/master/pgulid.sql")
 	if err != nil {
 		log.Panic(err)
@@ -162,6 +147,31 @@ func InitDB() {
 		log.Panic(err)
 	}
 
+	file, err := ioutil.ReadFile("database.sql")
+	if err != nil {
+		log.Panic(err)
+	}
+
+	_, err = DB.Exec(string(file))
+	if err != nil {
+		log.Panic(err)
+	}
+
+	_, err = db.Exec(`
+	CREATE EXTENSION moddatetime;
+	CREATE TRIGGER update_date_users BEFORE UPDATE ON users FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+	CREATE TRIGGER update_date_tokens BEFORE UPDATE ON tokens FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+	CREATE TRIGGER update_date_homes BEFORE UPDATE ON homes FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+	CREATE TRIGGER update_date_gateways BEFORE UPDATE ON gateways FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+	CREATE TRIGGER update_date_rooms BEFORE UPDATE ON rooms FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+	CREATE TRIGGER update_date_devices BEFORE UPDATE ON devices FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+	CREATE TRIGGER update_date_permissions BEFORE UPDATE ON permissions FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+	CREATE TRIGGER update_date_automations BEFORE UPDATE ON automations FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+	`)
+	if err != nil {
+		log.Panic(err)
+	}
+
 	db.Close()
 }
 
@@ -170,16 +180,6 @@ func StartDB() {
 	var err error
 	connStr := "postgres://postgres:password@localhost/casadb?sslmode=disable"
 	DB, err = sqlx.Open("postgres", connStr)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	file, err := ioutil.ReadFile("database.sql")
-	if err != nil {
-		log.Panic(err)
-	}
-
-	_, err = DB.Exec(string(file))
 	if err != nil {
 		log.Panic(err)
 	}
