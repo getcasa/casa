@@ -3,9 +3,9 @@ package server
 import (
 	"fmt"
 	"net/http"
-	"strings"
-	"time"
+	"reflect"
 
+	"github.com/ItsJimi/casa/utils"
 	"github.com/labstack/echo"
 )
 
@@ -20,41 +20,48 @@ func AddRoom(c echo.Context) error {
 		fmt.Println(err)
 		return err
 	}
-	var missingFields []string
-	if req.Name == "" {
-		missingFields = append(missingFields, "name")
-	}
-	if len(missingFields) > 0 {
+
+	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Name"}); err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: "Some fields missing: " + strings.Join(missingFields, ", "),
+			Message: err.Error(),
 		})
 	}
 
 	user := c.Get("user").(User)
 
-	roomID := NewULID().String()
-	newRoom := Room{
-		ID:        roomID,
-		Name:      req.Name,
-		HomeID:    c.Param("homeId"),
-		CreatedAt: time.Now().Format(time.RFC1123),
-		CreatorID: user.ID,
+	row, err := DB.Query("INSERT INTO rooms (id, name, home_id, created_at, creator_id) VALUES (generate_ulid(), :name, :home_id, :creator_id) RETURNING id;", req.Name, c.Param("homeId"), user.ID)
+	if err != nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Error 1: Token can't be create",
+		})
 	}
-	DB.NamedExec("INSERT INTO rooms (id, name, home_id, created_at, creator_id) VALUES (:id, :name, :home_id, :created_at, :creator_id)", newRoom)
+	var roomID string
+	row.Next()
+	err = row.Scan(&roomID)
+	if err != nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Error 2: Token can't be create",
+		})
+	}
 
-	permissionID := NewULID().String()
 	newPermission := Permission{
-		ID:        permissionID,
-		UserID:    user.ID,
-		Type:      "room",
-		TypeID:    roomID,
-		Read:      1,
-		Write:     1,
-		Manage:    1,
-		Admin:     1,
-		UpdatedAt: time.Now().Format(time.RFC1123),
+		UserID: user.ID,
+		Type:   "room",
+		TypeID: roomID,
+		Read:   1,
+		Write:  1,
+		Manage: 1,
+		Admin:  1,
 	}
-	DB.NamedExec("INSERT INTO permissions (id, user_id, type, type_id, read, write, manage, admin, updated_at) VALUES (:id, :user_id, :type, :type_id, :read, :write, :manage, :admin, :updated_at)", newPermission)
+	_, err = DB.NamedExec("INSERT INTO permissions (id, user_id, type, type_id, read, write, manage, admin, updated_at) VALUES (generate_ulid(), :user_id, :type, :type_id, :read, :write, :manage, :admin)", newPermission)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, MessageResponse{
+			Message: "Can't add new permission: " + err.Error(),
+		})
+	}
 
 	return c.JSON(http.StatusCreated, MessageResponse{
 		Message: roomID,
@@ -68,13 +75,11 @@ func UpdateRoom(c echo.Context) error {
 		fmt.Println(err)
 		return err
 	}
-	var missingFields []string
-	if req.Name == "" {
-		missingFields = append(missingFields, "name")
-	}
-	if len(missingFields) > 0 {
+
+	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Name"}); err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: "Some fields missing: " + strings.Join(missingFields, ", "),
+			Message: err.Error(),
 		})
 	}
 

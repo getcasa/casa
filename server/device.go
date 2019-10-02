@@ -3,9 +3,9 @@ package server
 import (
 	"fmt"
 	"net/http"
-	"strings"
-	"time"
+	"reflect"
 
+	"github.com/ItsJimi/casa/utils"
 	"github.com/labstack/echo"
 )
 
@@ -25,42 +25,15 @@ func AddDevice(c echo.Context) error {
 		fmt.Println(err)
 		return err
 	}
-	var missingFields []string
-	if req.Name == "" {
-		missingFields = append(missingFields, "name")
-	}
-	if req.GatewayID == "" {
-		missingFields = append(missingFields, "GatewayID")
-	}
-	if req.PhysicalID == "" {
-		missingFields = append(missingFields, "PhysicalID")
-	}
-	if req.PhysicalName == "" {
-		missingFields = append(missingFields, "PhysicalName")
-	}
-	if req.Plugin == "" {
-		missingFields = append(missingFields, "Plugin")
-	}
-	if len(missingFields) > 0 {
+
+	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Name", "GatewayID", "PhysicalID", "PhysicalName", "Plugin"}); err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: "Some fields missing: " + strings.Join(missingFields, ", "),
+			Message: err.Error(),
 		})
 	}
 
 	user := c.Get("user").(User)
-
-	deviceID := NewULID().String()
-	newDevice := Device{
-		ID:           deviceID,
-		Name:         req.Name,
-		RoomID:       c.Param("roomId"),
-		GatewayID:    req.GatewayID,
-		PhysicalID:   req.PhysicalID,
-		PhysicalName: req.PhysicalName,
-		Plugin:       req.Plugin,
-		CreatedAt:    time.Now().Format(time.RFC1123),
-		CreatorID:    user.ID,
-	}
 
 	var device Device
 	err := DB.Get(&device, "SELECT * FROM devices WHERE physical_id=$1 AND gateway_id=$2", req.PhysicalID, req.GatewayID)
@@ -71,27 +44,38 @@ func AddDevice(c echo.Context) error {
 		})
 	}
 
-	_, err = DB.NamedExec("INSERT INTO devices (id, name, room_id, gateway_id, physical_id, physical_name, plugin, created_at, creator_id) VALUES (:id, :name, :room_id, :gateway_id, :physical_id, :physical_name, :plugin, :created_at, :creator_id)", newDevice)
+	row, err := DB.Query("INSERT INTO devices (id, name, room_id, gateway_id, physical_id, physical_name, plugin, created_at, creator_id) VALUES (generate_ulid(), :name, :room_id, :gateway_id, :physical_id, :physical_name, :plugin, :creator_id) RETURNING id;", req.Name, c.Param("roomId"), req.GatewayID, req.PhysicalID, req.PhysicalName, req.Plugin, user.ID)
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: "Error 2: Can't create device",
+			Message: "Error 1: Token can't be create",
+		})
+	}
+	var deviceID string
+	row.Next()
+	err = row.Scan(&deviceID)
+	if err != nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Error 2: Token can't be create",
 		})
 	}
 
-	permissionID := NewULID().String()
 	newPermission := Permission{
-		ID:        permissionID,
-		UserID:    user.ID,
-		Type:      "device",
-		TypeID:    deviceID,
-		Read:      1,
-		Write:     1,
-		Manage:    1,
-		Admin:     1,
-		UpdatedAt: time.Now().Format(time.RFC1123),
+		UserID: user.ID,
+		Type:   "device",
+		TypeID: deviceID,
+		Read:   1,
+		Write:  1,
+		Manage: 1,
+		Admin:  1,
 	}
-	DB.NamedExec("INSERT INTO permissions (id, user_id, type, type_id, read, write, manage, admin, updated_at) VALUES (:id, :user_id, :type, :type_id, :read, :write, :manage, :admin, :updated_at)", newPermission)
+	_, err = DB.NamedExec("INSERT INTO permissions (id, user_id, type, type_id, read, write, manage, admin) VALUES (generate_ulid(), :user_id, :type, :type_id, :read, :write, :manage, :admin)", newPermission)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, MessageResponse{
+			Message: "Can't add new permission: " + err.Error(),
+		})
+	}
 
 	return c.JSON(http.StatusCreated, MessageResponse{
 		Message: deviceID,

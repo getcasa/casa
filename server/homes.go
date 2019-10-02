@@ -45,8 +45,12 @@ func AddHome(c echo.Context) error {
 		UserID: user.ID,
 		Type:   "home",
 		TypeID: homeID,
+		Read:   1,
+		Write:  1,
+		Manage: 1,
+		Admin:  1,
 	}
-	_, err = DB.NamedExec("INSERT INTO permissions (id, user_id, type, type_id) VALUES (generate_ulid(), :user_id, :type, :type_id)", newPermission)
+	_, err = DB.NamedExec("INSERT INTO permissions (id, user_id, type, type_id, read, write, manage, admin) VALUES (generate_ulid(), :user_id, :type, :type_id, :read, :write, :manage, :admin)", newPermission)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Can't add new permission: " + err.Error(),
