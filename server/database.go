@@ -18,6 +18,7 @@ type User struct {
 	Password  string `db:"password" json:"-"`
 	Birthdate string `db:"birthdate" json:"birthdate"`
 	CreatedAt string `db:"created_at" json:"createdAt"`
+	UpdatedAt string `db:"updated_at" json:"updatedAt"`
 }
 
 // Token structure in database
@@ -32,6 +33,7 @@ type Token struct {
 	Manage    int    `db:"manage" json:"manage"`
 	Admin     int    `db:"admin" json:"admin"`
 	CreatedAt string `db:"created_at" json:"createdAt"`
+	UpdatedAt string `db:"updated_at" json:"updatedAt"`
 	ExpireAt  string `db:"expire_at" json:"expireAt"`
 }
 
@@ -42,6 +44,7 @@ type Gateway struct {
 	Name      sql.NullString `db:"name" json:"name"`
 	Model     string         `db:"model" json:"model"`
 	CreatedAt string         `db:"created_at" json:"createdAt"`
+	UpdatedAt string         `db:"updated_at" json:"updatedAt"`
 	CreatorID sql.NullString `db:"creator_id" json:"creatorId"`
 }
 
@@ -51,6 +54,7 @@ type Home struct {
 	Name      string `db:"name" json:"name"`
 	Address   string `db:"address" json:"address"`
 	CreatedAt string `db:"created_at" json:"createdAt"`
+	UpdatedAt string `db:"updated_at" json:"updatedAt"`
 	CreatorID string `db:"creator_id" json:"creatorId"`
 }
 
@@ -61,6 +65,7 @@ type Room struct {
 	Icon      string `db:"icon" json:"icon"`
 	HomeID    string `db:"home_id" json:"homeId"`
 	CreatedAt string `db:"created_at" json:"createdAt"`
+	UpdatedAt string `db:"updated_at" json:"updatedAt"`
 	CreatorID string `db:"creator_id" json:"creatorId"`
 }
 
@@ -74,6 +79,7 @@ type Device struct {
 	Plugin       string `db:"plugin" json:"plugin"`
 	RoomID       string `db:"room_id" json:"roomId"`
 	CreatedAt    string `db:"created_at" json:"createdAt"`
+	UpdatedAt    string `db:"updated_at" json:"updatedAt"`
 	CreatorID    string `db:"creator_id" json:"creatorId"`
 }
 
@@ -104,6 +110,7 @@ type Automation struct {
 	ActionValue     []string `db:"action_value" json:"actionValue"`
 	Status          bool     `db:"status" json:"status"`
 	CreatedAt       string   `db:"created_at" json:"createdAt"`
+	UpdatedAt       string   `db:"updated_at" json:"updatedAt"`
 	CreatorID       string   `db:"creator_id" json:"creatorId"`
 }
 
@@ -120,6 +127,21 @@ func InitDB() {
 	}
 
 	_, err = db.Exec("CREATE database casadb")
+	if err != nil {
+		log.Panic(err)
+	}
+
+	_, err = db.Exec(`
+	CREATE EXTENSION moddatetime;
+	CREATE TRIGGER update_date_users BEFORE UPDATE ON users FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+	CREATE TRIGGER update_date_tokens BEFORE UPDATE ON tokens FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+	CREATE TRIGGER update_date_homes BEFORE UPDATE ON homes FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+	CREATE TRIGGER update_date_gateways BEFORE UPDATE ON gateways FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+	CREATE TRIGGER update_date_rooms BEFORE UPDATE ON rooms FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+	CREATE TRIGGER update_date_devices BEFORE UPDATE ON devices FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+	CREATE TRIGGER update_date_permissions BEFORE UPDATE ON permissions FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+	CREATE TRIGGER update_date_automations BEFORE UPDATE ON automations FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+	`)
 	if err != nil {
 		log.Panic(err)
 	}

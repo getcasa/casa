@@ -3,10 +3,10 @@ package server
 import (
 	"fmt"
 	"net/http"
-	"regexp"
-	"strings"
+	"reflect"
 	"time"
 
+	"github.com/ItsJimi/casa/utils"
 	"github.com/labstack/echo"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -31,55 +31,27 @@ type signinReq struct {
 func SignUp(c echo.Context) error {
 	req := new(signupReq)
 	if err := c.Bind(req); err != nil {
+		fmt.Println(err)
 		return err
 	}
-	var missingFields []string
-	if req.Email == "" {
-		missingFields = append(missingFields, "email")
-	}
-	if req.Password == "" {
-		missingFields = append(missingFields, "password")
-	}
-	if req.PasswordConfirmation == "" {
-		missingFields = append(missingFields, "passwordConfirmation")
-	}
-	if req.Firstname == "" {
-		missingFields = append(missingFields, "firstname")
-	}
-	if req.Lastname == "" {
-		missingFields = append(missingFields, "lastname")
-	}
-	if req.Birthdate == "" {
-		missingFields = append(missingFields, "birthdate")
-	}
-	if len(missingFields) > 0 {
+
+	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Email", "Password", "PasswordConfirmation", "Firstname"}); err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: "Some fields missing: " + strings.Join(missingFields, ", "),
+			Message: err.Error(),
 		})
 	}
-	isValid, _ := regexp.MatchString(emailRegExp, req.Email)
-	if isValid == false {
-		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: "Invalid email",
-		})
-	}
+
 	if req.Password != req.PasswordConfirmation {
 		return c.JSON(http.StatusBadRequest, MessageResponse{
 			Message: "Passwords mismatch",
-		})
-	}
-	var user User
-	err := DB.Get(&user, "SELECT * FROM users WHERE email=$1", req.Email)
-	if err == nil {
-		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: "Email already used",
 		})
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), 14)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
-			Message: "Error 1",
+			Message: "Error password encryption",
 		})
 	}
 
@@ -89,9 +61,13 @@ func SignUp(c echo.Context) error {
 		Firstname: req.Firstname,
 		Lastname:  req.Lastname,
 		Birthdate: req.Birthdate,
-		CreatedAt: time.Now().Format(time.RFC1123),
 	}
-	DB.NamedExec("INSERT INTO users (id, email, password, firstname, lastname, birthdate, created_at) VALUES (generate_ulid(), :email, :password, :firstname, :lastname, :birthdate, :created_at)", newUser)
+	_, err = DB.NamedExec("INSERT INTO users (id, email, password, firstname, lastname, birthdate) VALUES (generate_ulid(), :email, :password, :firstname, :lastname, :birthdate)", newUser)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, MessageResponse{
+			Message: "Can't add new user: " + err.Error(),
+		})
+	}
 
 	return c.JSON(http.StatusCreated, MessageResponse{
 		Message: "Account created",
@@ -104,16 +80,11 @@ func SignIn(c echo.Context) error {
 	if err := c.Bind(req); err != nil {
 		return err
 	}
-	var missingFields []string
-	if req.Email == "" {
-		missingFields = append(missingFields, "email")
-	}
-	if req.Password == "" {
-		missingFields = append(missingFields, "password")
-	}
-	if len(missingFields) > 0 {
+
+	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Email", "Password"}); err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: "Some fields missing: " + strings.Join(missingFields, ", "),
+			Message: err.Error(),
 		})
 	}
 
@@ -125,8 +96,8 @@ func SignIn(c echo.Context) error {
 		})
 	}
 
-	row, err := DB.Query("INSERT INTO tokens (id, user_id, type, ip, user_agent, read, write, manage, admin) VALUES (generate_ulid(), $1, $2, $3, $4, $5, $6, $7, $8) RETURNING id;",
-		user.ID, "signin", c.RealIP(), c.Request().UserAgent(), 1, 1, 1, 1)
+	row, err := DB.Query("INSERT INTO tokens (id, user_id, type, ip, user_agent) VALUES (generate_ulid(), $1, $2, $3, $4) RETURNING id;",
+		user.ID, "signin", c.RealIP(), c.Request().UserAgent())
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{
@@ -148,15 +119,20 @@ func SignIn(c echo.Context) error {
 	})
 }
 
+type tokenUser struct {
+	Token
+	User
+}
+
 // IsAuthenticated verify validity of token
 func IsAuthenticated(key string, c echo.Context) (bool, error) {
-	var token Token
-	err := DB.Get(&token, "SELECT * FROM tokens WHERE id=$1", key)
+	var token tokenUser
+	err := DB.Get(&token, "SELECT * FROM tokens JOIN users ON tokens.user_id = users.id WHERE tokens.id=$1", key)
 	if err != nil {
 		return false, nil
 	}
 
-	expireAt, err := time.Parse(time.RFC1123, token.ExpireAt)
+	expireAt, err := time.Parse(time.RFC3339, token.Token.ExpireAt)
 	if err != nil {
 		return false, nil
 	}
@@ -164,13 +140,8 @@ func IsAuthenticated(key string, c echo.Context) (bool, error) {
 		return false, nil
 	}
 
-	var user User
-	err = DB.Get(&user, "SELECT * FROM users WHERE id=$1", token.UserID)
-	if err != nil {
-		return false, nil
-	}
-	user.Password = ""
-	c.Set("user", user)
+	token.User.Password = ""
+	c.Set("user", token.User)
 
 	return true, nil
 }
