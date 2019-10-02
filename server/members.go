@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -164,5 +165,82 @@ func removeMember(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, MessageResponse{
 		Message: reqUser.Firstname + " has been removed from your home",
+	})
+}
+
+type editMemberReq struct {
+	Read   string
+	Write  string
+	Manage string
+	Admin  string
+}
+
+// EditMember route create a new permission to authorize an user
+func EditMember(c echo.Context) error {
+	req := new(editMemberReq)
+	if err := c.Bind(req); err != nil {
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Wrong parameters",
+		})
+	}
+
+	var missingFields []string
+	if req.Read == "" {
+		missingFields = append(missingFields, "read")
+	}
+	if req.Write == "" {
+		missingFields = append(missingFields, "write")
+	}
+	if req.Manage == "" {
+		missingFields = append(missingFields, "manage")
+	}
+	if req.Admin == "" {
+		missingFields = append(missingFields, "admin")
+	}
+	if len(missingFields) > 0 {
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Some fields missing: " + strings.Join(missingFields, ", "),
+		})
+	}
+
+	read, err := strconv.Atoi(req.Read)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Read has a wrong value",
+		})
+	}
+	write, err := strconv.Atoi(req.Write)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Write has a wrong value",
+		})
+	}
+	manage, err := strconv.Atoi(req.Manage)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Manage has a wrong value",
+		})
+	}
+	admin, err := strconv.Atoi(req.Admin)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Admin has a wrong value",
+		})
+	}
+
+	_, err = DB.Exec(`
+		UPDATE permissions
+		SET read=$1, write=$2, manage=$3, admin=$4
+		WHERE user_id=$5 AND type=$6 AND type_id=$7
+	`, read, write, manage, admin, c.Param("userId"), "home", c.Param("homeId"))
+	if err != nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusInternalServerError, MessageResponse{
+			Message: "Error 5: Can't edit member",
+		})
+	}
+
+	return c.JSON(http.StatusOK, MessageResponse{
+		Message: "Member has been updated",
 	})
 }

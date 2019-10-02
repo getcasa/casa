@@ -83,6 +83,9 @@ func Start(port string) {
 	v1.DELETE("/homes/:homeId/members/:userId", removeMember, func(next echo.HandlerFunc) echo.HandlerFunc {
 		return hasPermission(next, "home", 0, 0, 1, 0)
 	})
+	v1.PUT("/homes/:homeId/members/:userId", EditMember, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "home", 0, 0, 0, 1)
+	})
 
 	// Rooms
 	v1.POST("/homes/:homeId/rooms", AddRoom, func(next echo.HandlerFunc) echo.HandlerFunc {
