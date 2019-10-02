@@ -144,7 +144,7 @@ func InitDB() {
 		log.Panic(err)
 	}
 
-	row, err := db.Exec(string(file))
+	_, err = db.Exec(string(file))
 	if err != nil {
 		log.Panic(err)
 	}
