@@ -128,23 +128,7 @@ func InitDB() {
 
 	_, err = db.Exec("CREATE database casadb")
 	if err != nil {
-		log.Panic(err)
-	}
-
-	resp, err := http.Get("https://raw.githubusercontent.com/geckoboard/pgulid/master/pgulid.sql")
-	if err != nil {
-		log.Panic(err)
-	}
-
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	_, err = DB.Exec(string(body))
-	if err != nil {
-		log.Panic(err)
+		// log.Panic(err)
 	}
 
 	file, err := ioutil.ReadFile("database.sql")
@@ -152,7 +136,7 @@ func InitDB() {
 		log.Panic(err)
 	}
 
-	_, err = DB.Exec(string(file))
+	_, err = db.Exec(string(file))
 	if err != nil {
 		log.Panic(err)
 	}
@@ -168,6 +152,22 @@ func InitDB() {
 	CREATE TRIGGER update_date_permissions BEFORE UPDATE ON permissions FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
 	CREATE TRIGGER update_date_automations BEFORE UPDATE ON automations FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
 	`)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	resp, err := http.Get("https://raw.githubusercontent.com/geckoboard/pgulid/master/pgulid.sql")
+	if err != nil {
+		log.Panic(err)
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	_, err = db.Exec(string(body))
 	if err != nil {
 		log.Panic(err)
 	}
