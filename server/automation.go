@@ -3,20 +3,23 @@ package server
 import (
 	"fmt"
 	"net/http"
-	"strings"
-	"time"
+	"reflect"
 
+	"github.com/ItsJimi/casa/utils"
 	"github.com/labstack/echo"
 	"github.com/lib/pq"
 )
 
 type addAutomationReq struct {
-	Name         string
-	Trigger      []string
-	TriggerValue []string
-	Action       []string
-	ActionValue  []string
-	Status       bool
+	Name            string
+	Trigger         []string
+	TriggerKey      []string
+	TriggerOperator []string
+	TriggerValue    []string
+	Action          []string
+	ActionCall      []string
+	ActionValue     []string
+	Status          bool
 }
 
 // AddAutomation route create and add user to an automation
@@ -26,25 +29,11 @@ func AddAutomation(c echo.Context) error {
 		fmt.Println(err)
 		return err
 	}
-	var missingFields []string
-	if req.Name == "" {
-		missingFields = append(missingFields, "name")
-	}
-	if req.Trigger == nil {
-		missingFields = append(missingFields, "Trigger")
-	}
-	if req.TriggerValue == nil {
-		missingFields = append(missingFields, "TriggerValue")
-	}
-	if req.Action == nil {
-		missingFields = append(missingFields, "Action")
-	}
-	if req.ActionValue == nil {
-		missingFields = append(missingFields, "ActionValue")
-	}
-	if len(missingFields) > 0 {
+
+	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Name", "Trigger", "TriggerValue", "TriggerKey", "TriggerOperator", "Action", "ActionCall", "ActionValue"}); err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: "Some fields missing: " + strings.Join(missingFields, ", "),
+			Message: err.Error(),
 		})
 	}
 
@@ -52,21 +41,23 @@ func AddAutomation(c echo.Context) error {
 
 	automationID := NewULID().String()
 	newAutomation := Automation{
-		ID:           automationID,
-		Name:         req.Name,
-		Trigger:      req.Trigger,
-		TriggerValue: req.TriggerValue,
-		Action:       req.Action,
-		ActionValue:  req.ActionValue,
-		HomeID:       c.Param("homeId"),
-		Status:       true,
-		CreatedAt:    time.Now().Format(time.RFC1123),
-		CreatorID:    user.ID,
+		ID:              automationID,
+		Name:            req.Name,
+		Trigger:         req.Trigger,
+		TriggerKey:      req.TriggerKey,
+		TriggerOperator: req.TriggerOperator,
+		TriggerValue:    req.TriggerValue,
+		Action:          req.Action,
+		ActionCall:      req.ActionCall,
+		ActionValue:     req.ActionValue,
+		HomeID:          c.Param("homeId"),
+		Status:          true,
+		CreatorID:       user.ID,
 	}
 
 	var device Device
 	for _, trigg := range req.Trigger {
-		err := DB.Get(&device, `SELECT * FROM devices WHERE physical_id = $1`, trigg)
+		err := DB.Get(&device, `SELECT * FROM devices WHERE id = $1`, trigg)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, MessageResponse{
 				Message: "Trigger device not found",
@@ -75,7 +66,7 @@ func AddAutomation(c echo.Context) error {
 	}
 
 	for _, act := range req.Action {
-		err := DB.Get(&device, `SELECT * FROM devices WHERE physical_id = $1`, act)
+		err := DB.Get(&device, `SELECT * FROM devices WHERE id = $1`, act)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, MessageResponse{
 				Message: "Action device not found",
@@ -83,8 +74,8 @@ func AddAutomation(c echo.Context) error {
 		}
 	}
 
-	_, err := DB.Exec("INSERT INTO automations (id, name, trigger, trigger_value, action, action_value, status, created_at, creator_id, home_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
-		newAutomation.ID, newAutomation.Name, pq.Array(newAutomation.Trigger), pq.Array(newAutomation.TriggerValue), pq.Array(newAutomation.Action), pq.Array(newAutomation.ActionValue), newAutomation.Status, newAutomation.CreatedAt, newAutomation.CreatorID, newAutomation.HomeID)
+	_, err := DB.Exec("INSERT INTO automations (id, name, trigger, trigger_key, trigger_operator, trigger_value, action, action_call, action_value, status, creator_id, home_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
+		newAutomation.ID, newAutomation.Name, pq.Array(newAutomation.Trigger), pq.Array(newAutomation.TriggerKey), pq.Array(newAutomation.TriggerOperator), pq.Array(newAutomation.TriggerValue), pq.Array(newAutomation.Action), pq.Array(newAutomation.ActionCall), pq.Array(newAutomation.ActionValue), newAutomation.Status, newAutomation.CreatorID, newAutomation.HomeID)
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{
@@ -174,17 +165,20 @@ func DeleteAutomation(c echo.Context) error {
 }
 
 type automationStruct struct {
-	ID           string
-	HomeID       string `db:"home_id" json:"homeID"`
-	Name         string
-	Trigger      []string
-	TriggerValue []string `db:"trigger_value" json:"triggerValue"`
-	Action       []string
-	ActionValue  []string `db:"action_value" json:"actionValue"`
-	Status       bool
-	CreatedAt    string `db:"created_at" json:"createdAt"`
-	CreatorID    string `db:"creator_id" json:"creatorID"`
-	User         User
+	ID              string
+	HomeID          string `db:"home_id" json:"homeID"`
+	Name            string
+	Trigger         []string
+	TriggerKey      []string
+	TriggerOperator []string
+	TriggerValue    []string
+	Action          []string
+	ActionCall      []string
+	ActionValue     []string
+	Status          bool
+	CreatedAt       string `db:"created_at" json:"createdAt"`
+	CreatorID       string `db:"creator_id" json:"creatorID"`
+	User            User
 }
 
 // GetAutomations route get list of user automations
@@ -205,7 +199,7 @@ func GetAutomations(c echo.Context) error {
 	for rows.Next() {
 
 		var auto automationStruct
-		err := rows.Scan(&auto.ID, &auto.HomeID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerValue), pq.Array(&auto.Action), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.CreatorID)
+		err := rows.Scan(&auto.ID, &auto.HomeID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerKey), pq.Array(&auto.TriggerOperator), pq.Array(&auto.TriggerValue), pq.Array(&auto.Action), pq.Array(&auto.ActionCall), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.CreatorID)
 		if err != nil {
 			fmt.Println(err)
 			return c.JSON(http.StatusInternalServerError, MessageResponse{
@@ -213,17 +207,20 @@ func GetAutomations(c echo.Context) error {
 			})
 		}
 		automations = append(automations, automationStruct{
-			ID:           auto.ID,
-			HomeID:       auto.HomeID,
-			Name:         auto.Name,
-			Trigger:      auto.Trigger,
-			TriggerValue: auto.TriggerValue,
-			Action:       auto.Action,
-			ActionValue:  auto.ActionValue,
-			Status:       auto.Status,
-			CreatedAt:    auto.CreatedAt,
-			CreatorID:    auto.CreatorID,
-			User:         user,
+			ID:              auto.ID,
+			HomeID:          auto.HomeID,
+			Name:            auto.Name,
+			Trigger:         auto.Trigger,
+			TriggerKey:      auto.TriggerKey,
+			TriggerOperator: auto.TriggerOperator,
+			TriggerValue:    auto.TriggerValue,
+			Action:          auto.Action,
+			ActionCall:      auto.ActionCall,
+			ActionValue:     auto.ActionValue,
+			Status:          auto.Status,
+			CreatedAt:       auto.CreatedAt,
+			CreatorID:       auto.CreatorID,
+			User:            user,
 		})
 	}
 
@@ -246,7 +243,7 @@ func GetAutomation(c echo.Context) error {
 	}
 
 	var auto automationStruct
-	err := row.Scan(&auto.ID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerValue), pq.Array(&auto.Action), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.CreatorID, &auto.HomeID)
+	err := row.Scan(&auto.ID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerKey), pq.Array(&auto.TriggerOperator), pq.Array(&auto.TriggerValue), pq.Array(&auto.Action), pq.Array(&auto.ActionCall), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.CreatorID, &auto.HomeID)
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
@@ -256,17 +253,20 @@ func GetAutomation(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, DataReponse{
 		Data: automationStruct{
-			ID:           auto.ID,
-			HomeID:       auto.HomeID,
-			Name:         auto.Name,
-			Trigger:      auto.Trigger,
-			TriggerValue: auto.TriggerValue,
-			Action:       auto.Action,
-			ActionValue:  auto.ActionValue,
-			Status:       auto.Status,
-			CreatedAt:    auto.CreatedAt,
-			CreatorID:    auto.CreatorID,
-			User:         user,
+			ID:              auto.ID,
+			HomeID:          auto.HomeID,
+			Name:            auto.Name,
+			Trigger:         auto.Trigger,
+			TriggerKey:      auto.TriggerKey,
+			TriggerOperator: auto.TriggerOperator,
+			TriggerValue:    auto.TriggerValue,
+			Action:          auto.Action,
+			ActionCall:      auto.ActionCall,
+			ActionValue:     auto.ActionValue,
+			Status:          auto.Status,
+			CreatedAt:       auto.CreatedAt,
+			CreatorID:       auto.CreatorID,
+			User:            user,
 		},
 	})
 

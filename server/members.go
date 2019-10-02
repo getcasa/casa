@@ -3,10 +3,12 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/ItsJimi/casa/utils"
 	"github.com/labstack/echo"
 )
 
@@ -184,22 +186,10 @@ func EditMember(c echo.Context) error {
 		})
 	}
 
-	var missingFields []string
-	if req.Read == "" {
-		missingFields = append(missingFields, "read")
-	}
-	if req.Write == "" {
-		missingFields = append(missingFields, "write")
-	}
-	if req.Manage == "" {
-		missingFields = append(missingFields, "manage")
-	}
-	if req.Admin == "" {
-		missingFields = append(missingFields, "admin")
-	}
-	if len(missingFields) > 0 {
+	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Read", "Write", "Manage", "Admin"}); err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: "Some fields missing: " + strings.Join(missingFields, ", "),
+			Message: err.Error(),
 		})
 	}
 

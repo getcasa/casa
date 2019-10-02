@@ -4,9 +4,10 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
-	"time"
 
+	"github.com/ItsJimi/casa/utils"
 	"github.com/labstack/echo"
 	"github.com/lib/pq"
 	"github.com/oklog/ulid/v2"
@@ -62,11 +63,10 @@ func AddGateway(c echo.Context) error {
 	}
 
 	newGateway := Gateway{
-		ID:        req.ID,
-		Model:     req.Model,
-		CreatedAt: time.Now().Format(time.RFC1123),
+		ID:    req.ID,
+		Model: req.Model,
 	}
-	DB.NamedExec("INSERT INTO gateways (id, model, created_at) VALUES (:id, :model, :created_at)", newGateway)
+	DB.NamedExec("INSERT INTO gateways (id, model) VALUES (:id, :model)", newGateway)
 
 	fmt.Println(req.ID)
 
@@ -83,13 +83,11 @@ func UpdateGateway(c echo.Context) error {
 		fmt.Println(err)
 		return err
 	}
-	var missingFields []string
-	if req.Name == "" {
-		missingFields = append(missingFields, "name")
-	}
-	if len(missingFields) > 0 {
+
+	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Name"}); err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: "Some fields missing: " + strings.Join(missingFields, ", "),
+			Message: err.Error(),
 		})
 	}
 
@@ -169,8 +167,6 @@ func DeleteGateway(c echo.Context) error {
 		})
 	}
 
-	//TODO: delete device sync with gateway
-
 	return c.JSON(http.StatusOK, MessageResponse{
 		Message: "Gateway deleted",
 	})
@@ -185,19 +181,10 @@ func LinkGateway(c echo.Context) error {
 		return err
 	}
 
-	var missingFields []string
-	if req.ID == "" {
-		missingFields = append(missingFields, "id")
-	}
-	if req.User == "" {
-		missingFields = append(missingFields, "user")
-	}
-	if req.HomeID == "" {
-		missingFields = append(missingFields, "home_id")
-	}
-	if len(missingFields) > 0 {
+	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"ID", "User", "HomeID"}); err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: "Some fields missing: " + strings.Join(missingFields, ", "),
+			Message: err.Error(),
 		})
 	}
 
@@ -207,24 +194,6 @@ func LinkGateway(c echo.Context) error {
 		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{
 			Message: "Gateway already linked",
-		})
-	}
-
-	var user User
-	err = DB.Get(&user, "SELECT * FROM users WHERE ID=$1", req.User)
-	if err != nil {
-		fmt.Println(err)
-		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: "User " + req.User + " not found",
-		})
-	}
-
-	var home Home
-	err = DB.Get(&home, "SELECT * FROM homes WHERE ID=$1", req.HomeID)
-	if err != nil {
-		fmt.Println(err)
-		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: "Home " + req.HomeID + " not found",
 		})
 	}
 
@@ -365,28 +334,6 @@ func SyncGateway(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, DataReponse{
 		Data: synced,
-	})
-
-	// var user User
-	// err = DB.Get(&user, "SELECT * FROM users WHERE ID=$1", req.User)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return c.JSON(http.StatusBadRequest, MessageResponse{
-	// 		Message: "User " + req.User + " not found",
-	// 	})
-	// }
-
-	// var home Home
-	// err = DB.Get(&home, "SELECT * FROM homes WHERE ID=$1", req.HomeID)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return c.JSON(http.StatusBadRequest, MessageResponse{
-	// 		Message: "Home " + req.HomeID + " not found",
-	// 	})
-	// }
-
-	return c.JSON(http.StatusCreated, MessageResponse{
-		Message: "Gateway linked",
 	})
 }
 

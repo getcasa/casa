@@ -3,9 +3,9 @@ package server
 import (
 	"fmt"
 	"net/http"
-	"strings"
-	"time"
+	"reflect"
 
+	"github.com/ItsJimi/casa/utils"
 	"github.com/labstack/echo"
 )
 
@@ -21,41 +21,37 @@ func AddHome(c echo.Context) error {
 		fmt.Println(err)
 		return err
 	}
-	var missingFields []string
-	if req.Name == "" {
-		missingFields = append(missingFields, "name")
-	}
-	if len(missingFields) > 0 {
-		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: "Some fields missing: " + strings.Join(missingFields, ", "),
-		})
-	}
 
 	user := c.Get("user").(User)
 
-	homeID := NewULID().String()
-	newHome := Home{
-		ID:        homeID,
-		Name:      req.Name,
-		Address:   req.Address,
-		CreatedAt: time.Now().Format(time.RFC1123),
-		CreatorID: user.ID,
+	row, err := DB.Query("INSERT INTO homes (id, name, address, creator_id) VALUES (generate_ulid(), $1, $2, $3) RETURNING id;", req.Name, req.Address, user.ID)
+	if err != nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Can't add new home: " + err.Error(),
+		})
 	}
-	DB.NamedExec("INSERT INTO homes (id, name, address, created_at, creator_id) VALUES (:id, :name, :address, :created_at, :creator_id)", newHome)
+	var homeID string
+	row.Next()
+	err = row.Scan(&homeID)
+	if err != nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusBadRequest, MessageResponse{
+			Message: "Error 2: Permission can't be create",
+		})
+	}
 
-	permissionID := NewULID().String()
 	newPermission := Permission{
-		ID:        permissionID,
-		UserID:    user.ID,
-		Type:      "home",
-		TypeID:    homeID,
-		Read:      1,
-		Write:     1,
-		Manage:    1,
-		Admin:     1,
-		UpdatedAt: time.Now().Format(time.RFC1123),
+		UserID: user.ID,
+		Type:   "home",
+		TypeID: homeID,
 	}
-	DB.NamedExec("INSERT INTO permissions (id, user_id, type, type_id, read, write, manage, admin, updated_at) VALUES (:id, :user_id, :type, :type_id, :read, :write, :manage, :admin, :updated_at)", newPermission)
+	_, err = DB.NamedExec("INSERT INTO permissions (id, user_id, type, type_id) VALUES (generate_ulid(), :user_id, :type, :type_id)", newPermission)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, MessageResponse{
+			Message: "Can't add new permission: " + err.Error(),
+		})
+	}
 
 	return c.JSON(http.StatusCreated, MessageResponse{
 		Message: homeID,
@@ -69,23 +65,18 @@ func UpdateHome(c echo.Context) error {
 		fmt.Println(err)
 		return err
 	}
-	var missingFields []string
-	if req.Name == "" {
-		missingFields = append(missingFields, "name")
-	}
-	if req.Address == "" {
-		missingFields = append(missingFields, "address")
-	}
-	if len(missingFields) > 0 {
+
+	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Name"}); err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: "Some fields missing: " + strings.Join(missingFields, ", "),
+			Message: err.Error(),
 		})
 	}
 
 	user := c.Get("user").(User)
 
 	var permission Permission
-	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "home", c.Param("homeId"))
+	err := DB.Get(&permission, "SELECT manage, admin FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "home", c.Param("homeId"))
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusNotFound, MessageResponse{

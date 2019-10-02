@@ -131,12 +131,20 @@ func InitDB() {
 		// log.Panic(err)
 	}
 
+	db.Close()
+
+	connStr = "postgres://postgres:password@localhost/casadb?sslmode=disable"
+	db, err = sqlx.Open("postgres", connStr)
+	if err != nil {
+		log.Panic(err)
+	}
+
 	file, err := ioutil.ReadFile("database.sql")
 	if err != nil {
 		log.Panic(err)
 	}
 
-	_, err = db.Exec(string(file))
+	row, err := db.Exec(string(file))
 	if err != nil {
 		log.Panic(err)
 	}
@@ -153,7 +161,7 @@ func InitDB() {
 	CREATE TRIGGER update_date_automations BEFORE UPDATE ON automations FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
 	`)
 	if err != nil {
-		log.Panic(err)
+		// log.Panic(err)
 	}
 
 	resp, err := http.Get("https://raw.githubusercontent.com/geckoboard/pgulid/master/pgulid.sql")
@@ -169,7 +177,7 @@ func InitDB() {
 
 	_, err = db.Exec(string(body))
 	if err != nil {
-		log.Panic(err)
+		// log.Panic(err)
 	}
 
 	db.Close()
