@@ -48,12 +48,20 @@ func SignUp(c echo.Context) error {
 		})
 	}
 
+	birthdate, err := time.Parse(time.RFC3339, req.Birthdate)
+	if err != nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusInternalServerError, MessageResponse{
+			Message: "Error time",
+		})
+	}
+
 	newUser := User{
 		Email:     req.Email,
 		Password:  string(hashedPassword),
 		Firstname: req.Firstname,
 		Lastname:  req.Lastname,
-		Birthdate: req.Birthdate,
+		Birthdate: birthdate.Format("2006-01-02 00:00:00"),
 	}
 	_, err = DB.NamedExec("INSERT INTO users (id, email, password, firstname, lastname, birthdate) VALUES (generate_ulid(), :email, :password, :firstname, :lastname, :birthdate)", newUser)
 	if err != nil {
@@ -82,7 +90,7 @@ func SignIn(c echo.Context) error {
 	}
 
 	var user User
-	err := DB.Get(&user, "SELECT password FROM users WHERE email=$1", req.Email)
+	err := DB.Get(&user, "SELECT id, password FROM users WHERE email=$1", req.Email)
 	if err != nil || bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)) != nil {
 		return c.JSON(http.StatusBadRequest, MessageResponse{
 			Message: "Email and password doesn't match",
