@@ -114,24 +114,7 @@ func UpdateHome(c echo.Context) error {
 
 // DeleteHome route delete home
 func DeleteHome(c echo.Context) error {
-	user := c.Get("user").(User)
-
-	var permission Permission
-	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "home", c.Param("homeId"))
-	if err != nil {
-		fmt.Println(err)
-		return c.JSON(http.StatusNotFound, MessageResponse{
-			Message: "Error 1: Home not found",
-		})
-	}
-
-	if permission.Admin == 0 {
-		return c.JSON(http.StatusUnauthorized, MessageResponse{
-			Message: "Error 2: Unauthorized modifications",
-		})
-	}
-
-	_, err = DB.Exec("DELETE FROM homes WHERE id=$1", c.Param("homeId"))
+	_, err := DB.Exec("DELETE FROM homes WHERE id=$1", c.Param("homeId"))
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
