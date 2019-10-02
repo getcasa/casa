@@ -35,13 +35,6 @@ func SignUp(c echo.Context) error {
 		return err
 	}
 
-	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Email", "Password", "PasswordConfirmation", "Firstname"}); err != nil {
-		fmt.Println(err)
-		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: err.Error(),
-		})
-	}
-
 	if req.Password != req.PasswordConfirmation {
 		return c.JSON(http.StatusBadRequest, MessageResponse{
 			Message: "Passwords mismatch",
@@ -89,7 +82,7 @@ func SignIn(c echo.Context) error {
 	}
 
 	var user User
-	err := DB.Get(&user, "SELECT * FROM users WHERE email=$1", req.Email)
+	err := DB.Get(&user, "SELECT password FROM users WHERE email=$1", req.Email)
 	if err != nil || bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)) != nil {
 		return c.JSON(http.StatusBadRequest, MessageResponse{
 			Message: "Email and password doesn't match",
@@ -127,7 +120,7 @@ type tokenUser struct {
 // IsAuthenticated verify validity of token
 func IsAuthenticated(key string, c echo.Context) (bool, error) {
 	var token tokenUser
-	err := DB.Get(&token, "SELECT * FROM tokens JOIN users ON tokens.user_id = users.id WHERE tokens.id=$1", key)
+	err := DB.Get(&token, "SELECT users.*, tokens.expire_at FROM tokens JOIN users ON tokens.user_id = users.id WHERE tokens.id=$1", key)
 	if err != nil {
 		return false, nil
 	}
