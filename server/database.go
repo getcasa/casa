@@ -60,13 +60,13 @@ type Home struct {
 
 // Room structure in database
 type Room struct {
-	ID        string `db:"id" json:"id"`
-	Name      string `db:"name" json:"name"`
-	Icon      string `db:"icon" json:"icon"`
-	HomeID    string `db:"home_id" json:"homeId"`
-	CreatedAt string `db:"created_at" json:"createdAt"`
-	UpdatedAt string `db:"updated_at" json:"updatedAt"`
-	CreatorID string `db:"creator_id" json:"creatorId"`
+	ID        string         `db:"id" json:"id"`
+	Name      string         `db:"name" json:"name"`
+	Icon      sql.NullString `db:"icon" json:"icon"`
+	HomeID    string         `db:"home_id" json:"homeId"`
+	CreatedAt string         `db:"created_at" json:"createdAt"`
+	UpdatedAt string         `db:"updated_at" json:"updatedAt"`
+	CreatorID string         `db:"creator_id" json:"creatorId"`
 }
 
 // Device structure in database

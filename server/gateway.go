@@ -260,7 +260,6 @@ func SyncGateway(c echo.Context) error {
 
 	err = DB.Select(&synced.Rooms, `SELECT * FROM rooms WHERE home_id=$1`, synced.Gateway.HomeID)
 	if err != nil {
-		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{
 			Message: "Error 3: not found",
 		})
