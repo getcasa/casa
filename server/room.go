@@ -30,7 +30,7 @@ func AddRoom(c echo.Context) error {
 
 	user := c.Get("user").(User)
 
-	row, err := DB.Query("INSERT INTO rooms (id, name, home_id, created_at, creator_id) VALUES (generate_ulid(), :name, :home_id, :creator_id) RETURNING id;", req.Name, c.Param("homeId"), user.ID)
+	row, err := DB.Query("INSERT INTO rooms (id, name, home_id, creator_id) VALUES (generate_ulid(), $1, $2, $3) RETURNING id;", req.Name, c.Param("homeId"), user.ID)
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{
@@ -56,7 +56,7 @@ func AddRoom(c echo.Context) error {
 		Manage: 1,
 		Admin:  1,
 	}
-	_, err = DB.NamedExec("INSERT INTO permissions (id, user_id, type, type_id, read, write, manage, admin, updated_at) VALUES (generate_ulid(), :user_id, :type, :type_id, :read, :write, :manage, :admin)", newPermission)
+	_, err = DB.NamedExec("INSERT INTO permissions (id, user_id, type, type_id, read, write, manage, admin) VALUES (generate_ulid(), :user_id, :type, :type_id, :read, :write, :manage, :admin)", newPermission)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
 			Message: "Can't add new permission: " + err.Error(),
