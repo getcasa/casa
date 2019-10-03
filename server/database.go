@@ -93,6 +93,7 @@ type Permission struct {
 	Write     int    `db:"write" json:"write"`
 	Manage    int    `db:"manage" json:"manage"`
 	Admin     int    `db:"admin" json:"admin"`
+	CreatedAt string `db:"created_at" json:"createdAt"`
 	UpdatedAt string `db:"updated_at" json:"updatedAt"`
 }
 
