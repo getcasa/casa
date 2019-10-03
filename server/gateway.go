@@ -52,23 +52,17 @@ func AddGateway(c echo.Context) error {
 		})
 	}
 
-	var gateway Gateway
-	err = DB.Get(&gateway, "SELECT id FROM gateways WHERE id=$1", req.ID)
-	fmt.Println(err)
-	if err == nil {
-		fmt.Println(err)
-		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: "ID already exists",
-		})
-	}
-
 	newGateway := Gateway{
 		ID:    req.ID,
 		Model: req.Model,
 	}
-	DB.NamedExec("INSERT INTO gateways (id, model) VALUES (:id, :model)", newGateway)
-
-	fmt.Println(req.ID)
+	_, err = DB.NamedExec("INSERT INTO gateways (id, model) VALUES (:id, :model)", newGateway)
+	if err != nil {
+		fmt.Println(err)
+		return c.JSON(http.StatusInternalServerError, MessageResponse{
+			Message: "Error: can't create gateway",
+		})
+	}
 
 	return c.JSON(http.StatusCreated, MessageResponse{
 		Message: "Gateway created",

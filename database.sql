@@ -34,13 +34,13 @@ CREATE TABLE IF NOT EXISTS homes (
 );
 
 CREATE TABLE IF NOT EXISTS gateways (
-  id TEXT PRIMARY KEY,
-  home_id TEXT NOT NULL REFERENCES homes (id) ON DELETE CASCADE,
+  id TEXT PRIMARY KEY UNIQUE,
+  home_id TEXT REFERENCES homes (id) ON DELETE CASCADE,
   name TEXT,
   model TEXT,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  creator_id TEXT NOT NULL REFERENCES users (id)
+  creator_id TEXT REFERENCES users (id)
 );
 
 CREATE TABLE IF NOT EXISTS rooms (
@@ -96,3 +96,13 @@ CREATE TABLE IF NOT EXISTS automations (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
   creator_id TEXT NOT NULL REFERENCES users (id)
 );
+
+CREATE EXTENSION moddatetime;
+CREATE TRIGGER update_date_users BEFORE UPDATE ON users FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+CREATE TRIGGER update_date_tokens BEFORE UPDATE ON tokens FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+CREATE TRIGGER update_date_homes BEFORE UPDATE ON homes FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+CREATE TRIGGER update_date_gateways BEFORE UPDATE ON gateways FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+CREATE TRIGGER update_date_rooms BEFORE UPDATE ON rooms FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+CREATE TRIGGER update_date_devices BEFORE UPDATE ON devices FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+CREATE TRIGGER update_date_permissions BEFORE UPDATE ON permissions FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
+CREATE TRIGGER update_date_automations BEFORE UPDATE ON automations FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
