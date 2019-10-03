@@ -44,7 +44,8 @@ func AddDevice(c echo.Context) error {
 		})
 	}
 
-	row, err := DB.Query("INSERT INTO devices (id, name, room_id, gateway_id, physical_id, physical_name, plugin, created_at, creator_id) VALUES (generate_ulid(), :name, :room_id, :gateway_id, :physical_id, :physical_name, :plugin, :creator_id) RETURNING id;", req.Name, c.Param("roomId"), req.GatewayID, req.PhysicalID, req.PhysicalName, req.Plugin, user.ID)
+	row, err := DB.Query("INSERT INTO devices (id, name, room_id, gateway_id, physical_id, physical_name, plugin, creator_id) VALUES (generate_ulid(), $1, $2, $3, $4, $5, $6, $7) RETURNING id;",
+		req.Name, c.Param("roomId"), req.GatewayID, req.PhysicalID, req.PhysicalName, req.Plugin, user.ID)
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{

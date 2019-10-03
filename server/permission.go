@@ -17,7 +17,7 @@ func hasPermission(next echo.HandlerFunc, permissionType string, read, write, ma
 
 		if row == nil {
 			return c.JSON(http.StatusUnauthorized, MessageResponse{
-				Message: "Unauthorized",
+				Message: "Unauthorized 0",
 			})
 		}
 
@@ -25,28 +25,28 @@ func hasPermission(next echo.HandlerFunc, permissionType string, read, write, ma
 		err := row.StructScan(&permission)
 		if err != nil {
 			return c.JSON(http.StatusUnauthorized, MessageResponse{
-				Message: "Unauthorized",
+				Message: "Unauthorized 1",
 			})
 		}
 
 		if permission.Read != read && permission.Read < read && permission.Admin != 1 {
 			return c.JSON(http.StatusUnauthorized, MessageResponse{
-				Message: "Unauthorized",
+				Message: "Unauthorized 2",
 			})
 		}
 		if permission.Write != write && permission.Write < write && permission.Admin != 1 {
 			return c.JSON(http.StatusUnauthorized, MessageResponse{
-				Message: "Unauthorized",
+				Message: "Unauthorized 3",
 			})
 		}
 		if permission.Manage != manage && permission.Manage < manage && permission.Admin != 1 {
 			return c.JSON(http.StatusUnauthorized, MessageResponse{
-				Message: "Unauthorized",
+				Message: "Unauthorized 4",
 			})
 		}
 		if permission.Admin != admin && permission.Admin < admin {
 			return c.JSON(http.StatusUnauthorized, MessageResponse{
-				Message: "Unauthorized",
+				Message: "Unauthorized 5",
 			})
 		}
 
