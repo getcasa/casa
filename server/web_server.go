@@ -16,6 +16,12 @@ type MessageResponse struct {
 	Message string `json:"message"`
 }
 
+// ErrorResponse define json reponse error for API
+type ErrorResponse struct {
+	Error string `json:"error"`
+	Code  string `json:"code"`
+}
+
 // DataReponse define json response for API
 type DataReponse struct {
 	Data interface{} `json:"data"`
