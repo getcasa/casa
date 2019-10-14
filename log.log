@@ -1,0 +1,2 @@
+{"level":"warn","ts":"2019-10-14T19:51:22.039+0200","caller":"server/room.go:30","msg":"Some fields missing: name","code":"CSRAR002"}
+{"level":"error","ts":"2019-10-14T19:54:24.674+0200","caller":"server/room.go:21","msg":"code=400, message=Syntax error: offset=19, error=invalid character '\\r' in string literal","code":"CSRAR001"}
