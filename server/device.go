@@ -1,6 +1,7 @@
 package server
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -180,16 +181,16 @@ func DeleteDevice(c echo.Context) error {
 type permissionDevice struct {
 	Permission
 	User
-	DeviceID           string `db:"d_id"`
-	DeviceName         string `db:"d_name"`
-	DeviceIcon         string `db:"d_icon"`
-	DeviceRoomID       string `db:"d_roomid"`
-	DevicePlugin       string `db:"d_plugin"`
-	DeviceGatewayID    string `db:"d_gatewayid"`
-	DevicePhysicalID   string `db:"d_physicalid"`
-	DevicePhysicalName string `db:"d_physicalname"`
-	DeviceCreatedAt    string `db:"d_createdat"`
-	DeviceUpdatedAt    string `db:"d_updatedat"`
+	DeviceID           string         `db:"d_id"`
+	DeviceName         string         `db:"d_name"`
+	DeviceIcon         sql.NullString `db:"d_icon"`
+	DeviceRoomID       string         `db:"d_roomid"`
+	DevicePlugin       string         `db:"d_plugin"`
+	DeviceGatewayID    string         `db:"d_gatewayid"`
+	DevicePhysicalID   string         `db:"d_physicalid"`
+	DevicePhysicalName string         `db:"d_physicalname"`
+	DeviceCreatedAt    string         `db:"d_createdat"`
+	DeviceUpdatedAt    string         `db:"d_updatedat"`
 }
 
 type deviceRes struct {
