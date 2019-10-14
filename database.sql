@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS devices (
   id TEXT PRIMARY KEY,
   gateway_id TEXT NOT NULL REFERENCES gateways (id) ON DELETE CASCADE,
   name TEXT,
+  icon TEXT,
   physical_id TEXT NOT NULL,
   physical_name TEXT NOT NULL,
   plugin TEXT NOT NULL,

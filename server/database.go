@@ -71,16 +71,17 @@ type Room struct {
 
 // Device structure in database
 type Device struct {
-	ID           string `db:"id" json:"id"`
-	GatewayID    string `db:"gateway_id" json:"gatewayId"`
-	Name         string `db:"name" json:"name"`
-	PhysicalID   string `db:"physical_id" json:"physicalId"`
-	PhysicalName string `db:"physical_name" json:"physicalName"`
-	Plugin       string `db:"plugin" json:"plugin"`
-	RoomID       string `db:"room_id" json:"roomId"`
-	CreatedAt    string `db:"created_at" json:"createdAt"`
-	UpdatedAt    string `db:"updated_at" json:"updatedAt"`
-	CreatorID    string `db:"creator_id" json:"creatorId"`
+	ID           string         `db:"id" json:"id"`
+	GatewayID    string         `db:"gateway_id" json:"gatewayId"`
+	Name         string         `db:"name" json:"name"`
+	Icon         sql.NullString `db:"icon" json:"icon"`
+	PhysicalID   string         `db:"physical_id" json:"physicalId"`
+	PhysicalName string         `db:"physical_name" json:"physicalName"`
+	Plugin       string         `db:"plugin" json:"plugin"`
+	RoomID       string         `db:"room_id" json:"roomId"`
+	CreatedAt    string         `db:"created_at" json:"createdAt"`
+	UpdatedAt    string         `db:"updated_at" json:"updatedAt"`
+	CreatorID    string         `db:"creator_id" json:"creatorId"`
 }
 
 // Permission structure in database

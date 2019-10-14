@@ -16,6 +16,7 @@ type addDeviceReq struct {
 	PhysicalName string
 	RoomID       string
 	Plugin       string
+	Icon         string
 }
 
 // AddDevice route create a device
@@ -44,8 +45,8 @@ func AddDevice(c echo.Context) error {
 		})
 	}
 
-	row, err := DB.Query("INSERT INTO devices (id, name, room_id, gateway_id, physical_id, physical_name, plugin, creator_id) VALUES (generate_ulid(), $1, $2, $3, $4, $5, $6, $7) RETURNING id;",
-		req.Name, c.Param("roomId"), req.GatewayID, req.PhysicalID, req.PhysicalName, req.Plugin, user.ID)
+	row, err := DB.Query("INSERT INTO devices (id, name, icon, room_id, gateway_id, physical_id, physical_name, plugin, creator_id) VALUES (generate_ulid(), $1, $2, $3, $4, $5, $6, $7, $8) RETURNING id;",
+		req.Name, req.Icon, c.Param("roomId"), req.GatewayID, req.PhysicalID, req.PhysicalName, req.Plugin, user.ID)
 	if err != nil {
 		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{
@@ -90,16 +91,11 @@ func UpdateDevice(c echo.Context) error {
 		fmt.Println(err)
 		return err
 	}
-	var missingFields []string
-	if req.Name == "" {
-		missingFields = append(missingFields, "name")
-	}
-	if req.RoomID == "" {
-		missingFields = append(missingFields, "RoomID")
-	}
-	if len(missingFields) >= 2 {
+
+	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Name", "RoomID"}); err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: "Need one field (Name, RoomID)",
+			Message: err.Error(),
 		})
 	}
 
@@ -186,21 +182,27 @@ type permissionDevice struct {
 	User
 	DeviceID           string `db:"d_id"`
 	DeviceName         string `db:"d_name"`
+	DeviceIcon         string `db:"d_icon"`
 	DeviceRoomID       string `db:"d_roomid"`
+	DevicePlugin       string `db:"d_plugin"`
 	DeviceGatewayID    string `db:"d_gatewayid"`
 	DevicePhysicalID   string `db:"d_physicalid"`
 	DevicePhysicalName string `db:"d_physicalname"`
 	DeviceCreatedAt    string `db:"d_createdat"`
+	DeviceUpdatedAt    string `db:"d_updatedat"`
 }
 
 type deviceRes struct {
 	ID           string `json:"id"`
 	Name         string `json:"name"`
-	RoomID       string `json:"room_id"`
+	Icon         string `json:"icon"`
 	GatewayID    string `json:"gatewayId"`
 	PhysicalID   string `json:"physicalId"`
 	PhysicalName string `json:"physicalName"`
+	Plugin       string `json:"plugin"`
+	RoomID       string `json:"room_id"`
 	CreatedAt    string `json:"created_at"`
+	UpdatedAt    string `json:"updated_at"`
 	Creator      User   `json:"creator"`
 	Read         int    `json:"read"`
 	Write        int    `json:"write"`
@@ -214,7 +216,7 @@ func GetDevices(c echo.Context) error {
 
 	rows, err := DB.Queryx(`
 		SELECT permissions.*, users.*,
-		devices.id as d_id,	devices.name AS d_name, devices.room_id AS d_roomid, devices.gateway_id AS d_gatewayid, devices.physical_id AS d_physicalid, , devices.physical_name AS d_physicalname, devices.plugin AS d_plugin, devices.created_at AS d_createdat FROM permissions
+		devices.id as d_id,	devices.name AS d_name, devices.icon AS d_icon, devices.room_id AS d_roomid, devices.gateway_id AS d_gatewayid, devices.physical_id AS d_physicalid, devices.physical_name AS d_physicalname, devices.plugin AS d_plugin, devices.plugin AS d_plugin, devices.created_at AS d_createdat FROM permissions
 		JOIN devices ON permissions.type_id = devices.id
 		JOIN users ON devices.creator_id = users.id
 		WHERE type=$1 AND user_id=$2 AND (permissions.read=1 OR permissions.admin=1)
