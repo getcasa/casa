@@ -280,7 +280,7 @@ func GetRoom(c echo.Context) error {
 		contextLogger.Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Code:  "CSRGR002",
-			Error: "Error 4: Can't retrieve rooms",
+			Error: "Room can't be found",
 		})
 	}
 
