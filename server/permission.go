@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 
+	"github.com/ItsJimi/casa/logger"
 	"github.com/labstack/echo"
 )
 
@@ -16,37 +17,55 @@ func hasPermission(next echo.HandlerFunc, permissionType string, read, write, ma
 		`, reqUser.ID, permissionType, c.Param(permissionType+"Id"))
 
 		if row == nil {
-			return c.JSON(http.StatusUnauthorized, MessageResponse{
-				Message: "Unauthorized 0",
+			contextLogger := logger.WithFields(logger.Fields{"code": "CSPHP001", "userId": reqUser.ID, "type": permissionType, "typeId": c.Param(permissionType + "Id")})
+			contextLogger.Warnf("Unauthorized")
+			return c.JSON(http.StatusUnauthorized, ErrorResponse{
+				Code:  "CSPHP001",
+				Error: "Unauthorized",
 			})
 		}
 
 		var permission Permission
 		err := row.StructScan(&permission)
 		if err != nil {
-			return c.JSON(http.StatusUnauthorized, MessageResponse{
-				Message: "Unauthorized 1",
+			contextLogger := logger.WithFields(logger.Fields{"code": "CSPHP002", "userId": reqUser.ID, "type": permissionType, "typeId": c.Param(permissionType + "Id")})
+			contextLogger.Errorf("%s", err.Error())
+			return c.JSON(http.StatusUnauthorized, ErrorResponse{
+				Code:  "CSPHP002",
+				Error: "Unauthorized",
 			})
 		}
 
 		if permission.Read != read && permission.Read < read && permission.Admin != 1 {
-			return c.JSON(http.StatusUnauthorized, MessageResponse{
-				Message: "Unauthorized 2",
+			contextLogger := logger.WithFields(logger.Fields{"code": "CSPHP003", "userId": reqUser.ID, "type": permissionType, "typeId": c.Param(permissionType + "Id")})
+			contextLogger.Warnf("Unauthorized")
+			return c.JSON(http.StatusUnauthorized, ErrorResponse{
+				Code:  "CSPHP003",
+				Error: "Unauthorized",
 			})
 		}
 		if permission.Write != write && permission.Write < write && permission.Admin != 1 {
-			return c.JSON(http.StatusUnauthorized, MessageResponse{
-				Message: "Unauthorized 3",
+			contextLogger := logger.WithFields(logger.Fields{"code": "CSPHP004", "userId": reqUser.ID, "type": permissionType, "typeId": c.Param(permissionType + "Id")})
+			contextLogger.Warnf("Unauthorized")
+			return c.JSON(http.StatusUnauthorized, ErrorResponse{
+				Code:  "CSPHP004",
+				Error: "Unauthorized",
 			})
 		}
 		if permission.Manage != manage && permission.Manage < manage && permission.Admin != 1 {
-			return c.JSON(http.StatusUnauthorized, MessageResponse{
-				Message: "Unauthorized 4",
+			contextLogger := logger.WithFields(logger.Fields{"code": "CSPHP005", "userId": reqUser.ID, "type": permissionType, "typeId": c.Param(permissionType + "Id")})
+			contextLogger.Warnf("Unauthorized")
+			return c.JSON(http.StatusUnauthorized, ErrorResponse{
+				Code:  "CSPHP005",
+				Error: "Unauthorized",
 			})
 		}
 		if permission.Admin != admin && permission.Admin < admin {
-			return c.JSON(http.StatusUnauthorized, MessageResponse{
-				Message: "Unauthorized 5",
+			contextLogger := logger.WithFields(logger.Fields{"code": "CSPHP006", "userId": reqUser.ID, "type": permissionType, "typeId": c.Param(permissionType + "Id")})
+			contextLogger.Warnf("Unauthorized")
+			return c.JSON(http.StatusUnauthorized, ErrorResponse{
+				Code:  "CSPHP006",
+				Error: "Unauthorized",
 			})
 		}
 

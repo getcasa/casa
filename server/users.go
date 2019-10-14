@@ -19,7 +19,7 @@ func GetUser(c echo.Context) error {
 	}
 
 	err := errors.New("Wrong parameters")
-	contextLogger := logger.WithFields(logger.Fields{"code": "CSUGU001"})
+	contextLogger := logger.WithFields(logger.Fields{"code": "CSUGU001", "userId": c.Param("userId")})
 	contextLogger.Warnf("%s", err.Error())
 
 	return c.JSON(http.StatusBadRequest, ErrorResponse{

@@ -19,7 +19,10 @@ func AddRoom(c echo.Context) error {
 	if err := c.Bind(req); err != nil {
 		contextLogger := logger.WithFields(logger.Fields{"code": "CSRAR001"})
 		contextLogger.Errorf("%s", err.Error())
-		return err
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:  "CSRAR001",
+			Error: "Wrong parameters",
+		})
 	}
 
 	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Name"}); err != nil {
