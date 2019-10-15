@@ -16,6 +16,12 @@ type MessageResponse struct {
 	Message string `json:"message"`
 }
 
+// ErrorResponse define json reponse error for API
+type ErrorResponse struct {
+	Error string `json:"error"`
+	Code  string `json:"code"`
+}
+
 // DataReponse define json response for API
 type DataReponse struct {
 	Data interface{} `json:"data"`
@@ -80,7 +86,7 @@ func Start(port string) {
 	v1.POST("/homes/:homeId/members", AddMember, func(next echo.HandlerFunc) echo.HandlerFunc {
 		return hasPermission(next, "home", 0, 0, 1, 0)
 	})
-	v1.DELETE("/homes/:homeId/members/:userId", removeMember, func(next echo.HandlerFunc) echo.HandlerFunc {
+	v1.DELETE("/homes/:homeId/members/:userId", RemoveMember, func(next echo.HandlerFunc) echo.HandlerFunc {
 		return hasPermission(next, "home", 0, 0, 1, 0)
 	})
 	v1.PUT("/homes/:homeId/members/:userId", EditMember, func(next echo.HandlerFunc) echo.HandlerFunc {

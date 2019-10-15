@@ -1,10 +1,10 @@
 package server
 
 import (
-	"fmt"
 	"net/http"
 	"reflect"
 
+	"github.com/ItsJimi/casa/logger"
 	"github.com/ItsJimi/casa/utils"
 	"github.com/labstack/echo"
 	"github.com/lib/pq"
@@ -26,14 +26,20 @@ type addAutomationReq struct {
 func AddAutomation(c echo.Context) error {
 	req := new(addAutomationReq)
 	if err := c.Bind(req); err != nil {
-		fmt.Println(err)
-		return err
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSAAA001"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:  "CSAAA001",
+			Error: "Wrong parameters",
+		})
 	}
 
 	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Name", "Trigger", "TriggerValue", "TriggerKey", "TriggerOperator", "Action", "ActionCall", "ActionValue"}); err != nil {
-		fmt.Println(err)
-		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: err.Error(),
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSAAA002"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:  "CSAAA002",
+			Error: err.Error(),
 		})
 	}
 
@@ -59,8 +65,11 @@ func AddAutomation(c echo.Context) error {
 	for _, trigg := range req.Trigger {
 		err := DB.Get(&device, `SELECT * FROM devices WHERE id = $1`, trigg)
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, MessageResponse{
-				Message: "Trigger device not found",
+			contextLogger := logger.WithFields(logger.Fields{"code": "CSAAA003"})
+			contextLogger.Errorf("%s", err.Error())
+			return c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Code:  "CSAAA003",
+				Error: "Trigger device can't be found",
 			})
 		}
 	}
@@ -68,8 +77,11 @@ func AddAutomation(c echo.Context) error {
 	for _, act := range req.Action {
 		err := DB.Get(&device, `SELECT * FROM devices WHERE id = $1`, act)
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, MessageResponse{
-				Message: "Action device not found",
+			contextLogger := logger.WithFields(logger.Fields{"code": "CSAAA004"})
+			contextLogger.Errorf("%s", err.Error())
+			return c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Code:  "CSAAA004",
+				Error: "Action device can't be found",
 			})
 		}
 	}
@@ -77,9 +89,11 @@ func AddAutomation(c echo.Context) error {
 	_, err := DB.Exec("INSERT INTO automations (id, name, trigger, trigger_key, trigger_operator, trigger_value, action, action_call, action_value, status, creator_id, home_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
 		newAutomation.ID, newAutomation.Name, pq.Array(newAutomation.Trigger), pq.Array(newAutomation.TriggerKey), pq.Array(newAutomation.TriggerOperator), pq.Array(newAutomation.TriggerValue), pq.Array(newAutomation.Action), pq.Array(newAutomation.ActionCall), pq.Array(newAutomation.ActionValue), newAutomation.Status, newAutomation.CreatorID, newAutomation.HomeID)
 	if err != nil {
-		fmt.Println(err)
-		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: "Error 2: Can't create automation",
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSAAA005"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:  "CSAAA005",
+			Error: "Automation can't be created",
 		})
 	}
 
@@ -153,9 +167,11 @@ func DeleteAutomation(c echo.Context) error {
 
 	_, err := DB.Exec("DELETE FROM automations WHERE creator_id=$1 AND id=$2", user.ID, c.Param("automationId"))
 	if err != nil {
-		fmt.Println(err)
-		return c.JSON(http.StatusInternalServerError, MessageResponse{
-			Message: "Error 6: Can't delete automation",
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSADA001"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:  "CSADA001",
+			Error: "Automation can't be deleted",
 		})
 	}
 
@@ -189,9 +205,11 @@ func GetAutomations(c echo.Context) error {
 		SELECT * FROM automations
 		WHERE creator_id=$1`, user.ID)
 	if err != nil {
-		fmt.Println(err)
-		return c.JSON(http.StatusInternalServerError, MessageResponse{
-			Message: "Error 2: Can't retrieve automations",
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSAGAS001"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:  "CSAGAS001",
+			Error: "Automations can't be retrieved",
 		})
 	}
 
@@ -201,9 +219,11 @@ func GetAutomations(c echo.Context) error {
 		var auto automationStruct
 		err := rows.Scan(&auto.ID, &auto.HomeID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerKey), pq.Array(&auto.TriggerOperator), pq.Array(&auto.TriggerValue), pq.Array(&auto.Action), pq.Array(&auto.ActionCall), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.CreatorID)
 		if err != nil {
-			fmt.Println(err)
-			return c.JSON(http.StatusInternalServerError, MessageResponse{
-				Message: "Error 3: Can't retrieve automations",
+			contextLogger := logger.WithFields(logger.Fields{"code": "CSAGAS002"})
+			contextLogger.Errorf("%s", err.Error())
+			return c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Code:  "CSAGAS002",
+				Error: "Error 3: Can't retrieve automations",
 			})
 		}
 		automations = append(automations, automationStruct{
@@ -237,17 +257,22 @@ func GetAutomation(c echo.Context) error {
 		SELECT * FROM automations
 		WHERE creator_id=$1 AND id=$2`, user.ID, c.Param("automationId"))
 	if row == nil {
-		return c.JSON(http.StatusInternalServerError, MessageResponse{
-			Message: "Automation not found",
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSAGA001"})
+		contextLogger.Errorf("QueryRowx: Select automations")
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:  "CSAGA001",
+			Error: "Automation can't be found",
 		})
 	}
 
 	var auto automationStruct
 	err := row.Scan(&auto.ID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerKey), pq.Array(&auto.TriggerOperator), pq.Array(&auto.TriggerValue), pq.Array(&auto.Action), pq.Array(&auto.ActionCall), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.CreatorID, &auto.HomeID)
 	if err != nil {
-		fmt.Println(err)
-		return c.JSON(http.StatusInternalServerError, MessageResponse{
-			Message: "Error 3: Can't retrieve automations",
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSAGA002"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:  "CSAGA002",
+			Error: "Automation can't be found",
 		})
 	}
 

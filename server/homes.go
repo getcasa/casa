@@ -1,10 +1,10 @@
 package server
 
 import (
-	"fmt"
 	"net/http"
 	"reflect"
 
+	"github.com/ItsJimi/casa/logger"
 	"github.com/ItsJimi/casa/utils"
 	"github.com/labstack/echo"
 )
@@ -18,26 +18,34 @@ type addHomeReq struct {
 func AddHome(c echo.Context) error {
 	req := new(addHomeReq)
 	if err := c.Bind(req); err != nil {
-		fmt.Println(err)
-		return err
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSHAH001"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:  "CSRAR001",
+			Error: "Wrong parameters",
+		})
 	}
 
 	user := c.Get("user").(User)
 
 	row, err := DB.Query("INSERT INTO homes (id, name, address, creator_id) VALUES (generate_ulid(), $1, $2, $3) RETURNING id;", req.Name, req.Address, user.ID)
 	if err != nil {
-		fmt.Println(err)
-		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: "Can't add new home: " + err.Error(),
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSHAH002"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:  "CSHAH002",
+			Error: "Home can't be added",
 		})
 	}
 	var homeID string
 	row.Next()
 	err = row.Scan(&homeID)
 	if err != nil {
-		fmt.Println(err)
-		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: "Error 2: Permission can't be create",
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSHAH003"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:  "CSHAH003",
+			Error: "Home can't be added",
 		})
 	}
 
@@ -52,8 +60,11 @@ func AddHome(c echo.Context) error {
 	}
 	_, err = DB.NamedExec("INSERT INTO permissions (id, user_id, type, type_id, read, write, manage, admin) VALUES (generate_ulid(), :user_id, :type, :type_id, :read, :write, :manage, :admin)", newPermission)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, MessageResponse{
-			Message: "Can't add new permission: " + err.Error(),
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSHAH004"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:  "CSHAH004",
+			Error: "Home can't be added",
 		})
 	}
 
@@ -66,14 +77,20 @@ func AddHome(c echo.Context) error {
 func UpdateHome(c echo.Context) error {
 	req := new(addHomeReq)
 	if err := c.Bind(req); err != nil {
-		fmt.Println(err)
-		return err
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSHUH001"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:  "CSHUH001",
+			Error: "Wrong parameters",
+		})
 	}
 
 	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Name"}); err != nil {
-		fmt.Println(err)
-		return c.JSON(http.StatusBadRequest, MessageResponse{
-			Message: err.Error(),
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSHUH002"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:  "CSHUH002",
+			Error: err.Error(),
 		})
 	}
 
@@ -82,23 +99,30 @@ func UpdateHome(c echo.Context) error {
 	var permission Permission
 	err := DB.Get(&permission, "SELECT manage, admin FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "home", c.Param("homeId"))
 	if err != nil {
-		fmt.Println(err)
-		return c.JSON(http.StatusNotFound, MessageResponse{
-			Message: "Home not found",
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSHUH003"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusNotFound, ErrorResponse{
+			Code:  "CSHUH003",
+			Error: "Home can't be found",
 		})
 	}
 
 	if permission.Manage == 0 && permission.Admin == 0 {
-		return c.JSON(http.StatusUnauthorized, MessageResponse{
-			Message: "Unauthorized modifications",
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSHUH004"})
+		contextLogger.Warnf("Unauthorized")
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{
+			Code:  "CSHUH004",
+			Error: "Unauthorized modifications",
 		})
 	}
 
 	_, err = DB.Exec("UPDATE homes SET Name=$1, address=$2 WHERE id=$3", req.Name, req.Address, c.Param("homeId"))
 	if err != nil {
-		fmt.Println(err)
-		return c.JSON(http.StatusInternalServerError, MessageResponse{
-			Message: "Error 5: Can't update home",
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSHUH005"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:  "CSHUH005",
+			Error: "Home can't be updated",
 		})
 	}
 
@@ -111,16 +135,20 @@ func UpdateHome(c echo.Context) error {
 func DeleteHome(c echo.Context) error {
 	_, err := DB.Exec("DELETE FROM homes WHERE id=$1", c.Param("homeId"))
 	if err != nil {
-		fmt.Println(err)
-		return c.JSON(http.StatusInternalServerError, MessageResponse{
-			Message: "Error 3: Can't delete home",
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSHDH001"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:  "CSHDH001",
+			Error: "Home can't be deleted",
 		})
 	}
 	_, err = DB.Exec("DELETE FROM permissions WHERE type=$1 AND type_id=$2", "home", c.Param("homeId"))
 	if err != nil {
-		fmt.Println(err)
-		return c.JSON(http.StatusInternalServerError, MessageResponse{
-			Message: "Error 4: Can't delete home",
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSHDH002"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:  "CSHDH002",
+			Error: "Home can't be deleted",
 		})
 	}
 
@@ -161,9 +189,11 @@ func GetHomes(c echo.Context) error {
 		WHERE permissions.type=$1 AND permissions.user_id=$2
 	`, "home", user.ID)
 	if err != nil {
-		fmt.Println(err)
-		return c.JSON(http.StatusInternalServerError, MessageResponse{
-			Message: "Error 2: Can't retrieve homes",
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSHGHS001"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:  "CSHGHS001",
+			Error: "Homes can't be retrieved",
 		})
 	}
 
@@ -172,9 +202,11 @@ func GetHomes(c echo.Context) error {
 		var permission permissionHome
 		err := rows.StructScan(&permission)
 		if err != nil {
-			fmt.Println(err)
-			return c.JSON(http.StatusInternalServerError, MessageResponse{
-				Message: "Error 3: Can't retrieve homes",
+			contextLogger := logger.WithFields(logger.Fields{"code": "CSHGHS002"})
+			contextLogger.Errorf("%s", err.Error())
+			return c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Code:  "CSHGHS002",
+				Error: "Homes can't be retrieved",
 			})
 		}
 		homes = append(homes, homeRes{
@@ -207,17 +239,22 @@ func GetHome(c echo.Context) error {
 	`, "home", c.Param("homeId"), user.ID)
 
 	if row == nil {
-		return c.JSON(http.StatusNotFound, MessageResponse{
-			Message: "Error 3: Home not found",
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSHGH001"})
+		contextLogger.Errorf("QueryRowx: Select error")
+		return c.JSON(http.StatusNotFound, ErrorResponse{
+			Code:  "CSHGH001",
+			Error: "Home can't be found",
 		})
 	}
 
 	var permission permissionHome
 	err := row.StructScan(&permission)
 	if err != nil {
-		fmt.Println(err)
-		return c.JSON(http.StatusInternalServerError, MessageResponse{
-			Message: "Error 4: Can't retrieve homes",
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSHGH002"})
+		contextLogger.Errorf("QueryRowx: Select error")
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:  "CSHGH002",
+			Error: "Home can't be found",
 		})
 	}
 

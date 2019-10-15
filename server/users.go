@@ -1,8 +1,10 @@
 package server
 
 import (
+	"errors"
 	"net/http"
 
+	"github.com/ItsJimi/casa/logger"
 	"github.com/labstack/echo"
 )
 
@@ -16,7 +18,12 @@ func GetUser(c echo.Context) error {
 		})
 	}
 
-	return c.JSON(http.StatusBadRequest, MessageResponse{
-		Message: "Wrong parameters",
+	err := errors.New("Wrong parameters")
+	contextLogger := logger.WithFields(logger.Fields{"code": "CSUGU001", "userId": c.Param("userId")})
+	contextLogger.Warnf("%s", err.Error())
+
+	return c.JSON(http.StatusBadRequest, ErrorResponse{
+		Code:  "CSUGU001",
+		Error: err.Error(),
 	})
 }
