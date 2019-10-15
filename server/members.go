@@ -125,11 +125,10 @@ func AddMember(c echo.Context) error {
 		})
 	}
 
-	permissionID := NewULID().String()
 	_, err = DB.Exec(`
 		INSERT INTO permissions (id, user_id, type, type_id, read, write, manage, admin, updated_at) 
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-	`, permissionID, reqUser.ID, "home", c.Param("homeId"), 1, 0, 0, 0, time.Now().Format(time.RFC1123))
+		VALUES (generate_ulid(), $1, $2, $3, $4, $5, $6, $7, $8)
+	`, reqUser.ID, "home", c.Param("homeId"), 1, 0, 0, 0, time.Now().Format(time.RFC1123))
 	if err != nil {
 		contextLogger := logger.WithFields(logger.Fields{"code": "CSMAM005"})
 		contextLogger.Errorf("%s", err.Error())

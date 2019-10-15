@@ -21,7 +21,7 @@ func hasPermission(next echo.HandlerFunc, permissionType string, read, write, ma
 			contextLogger.Warnf("Unauthorized")
 			return c.JSON(http.StatusUnauthorized, ErrorResponse{
 				Code:  "CSPHP001",
-				Error: "Unauthorized 0",
+				Error: "Unauthorized",
 			})
 		}
 
@@ -32,7 +32,7 @@ func hasPermission(next echo.HandlerFunc, permissionType string, read, write, ma
 			contextLogger.Errorf("%s", err.Error())
 			return c.JSON(http.StatusUnauthorized, ErrorResponse{
 				Code:  "CSPHP002",
-				Error: "Unauthorized 1",
+				Error: "Unauthorized",
 			})
 		}
 
@@ -41,7 +41,7 @@ func hasPermission(next echo.HandlerFunc, permissionType string, read, write, ma
 			contextLogger.Warnf("Unauthorized")
 			return c.JSON(http.StatusUnauthorized, ErrorResponse{
 				Code:  "CSPHP003",
-				Error: "Unauthorized 2",
+				Error: "Unauthorized",
 			})
 		}
 		if permission.Write != write && permission.Write < write && permission.Admin != 1 {
@@ -49,7 +49,7 @@ func hasPermission(next echo.HandlerFunc, permissionType string, read, write, ma
 			contextLogger.Warnf("Unauthorized")
 			return c.JSON(http.StatusUnauthorized, ErrorResponse{
 				Code:  "CSPHP004",
-				Error: "Unauthorized 3",
+				Error: "Unauthorized",
 			})
 		}
 		if permission.Manage != manage && permission.Manage < manage && permission.Admin != 1 {
@@ -57,7 +57,7 @@ func hasPermission(next echo.HandlerFunc, permissionType string, read, write, ma
 			contextLogger.Warnf("Unauthorized")
 			return c.JSON(http.StatusUnauthorized, ErrorResponse{
 				Code:  "CSPHP005",
-				Error: "Unauthorized 4",
+				Error: "Unauthorized",
 			})
 		}
 		if permission.Admin != admin && permission.Admin < admin {
@@ -65,7 +65,7 @@ func hasPermission(next echo.HandlerFunc, permissionType string, read, write, ma
 			contextLogger.Warnf("Unauthorized")
 			return c.JSON(http.StatusUnauthorized, ErrorResponse{
 				Code:  "CSPHP006",
-				Error: "Unauthorized 5",
+				Error: "Unauthorized",
 			})
 		}
 

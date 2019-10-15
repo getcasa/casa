@@ -45,9 +45,7 @@ func AddAutomation(c echo.Context) error {
 
 	user := c.Get("user").(User)
 
-	automationID := NewULID().String()
 	newAutomation := Automation{
-		ID:              automationID,
 		Name:            req.Name,
 		Trigger:         req.Trigger,
 		TriggerKey:      req.TriggerKey,
@@ -86,13 +84,25 @@ func AddAutomation(c echo.Context) error {
 		}
 	}
 
-	_, err := DB.Exec("INSERT INTO automations (id, name, trigger, trigger_key, trigger_operator, trigger_value, action, action_call, action_value, status, creator_id, home_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
-		newAutomation.ID, newAutomation.Name, pq.Array(newAutomation.Trigger), pq.Array(newAutomation.TriggerKey), pq.Array(newAutomation.TriggerOperator), pq.Array(newAutomation.TriggerValue), pq.Array(newAutomation.Action), pq.Array(newAutomation.ActionCall), pq.Array(newAutomation.ActionValue), newAutomation.Status, newAutomation.CreatorID, newAutomation.HomeID)
+	row, err := DB.Query("INSERT INTO automations (id, name, trigger, trigger_key, trigger_operator, trigger_value, action, action_call, action_value, status, creator_id, home_id) VALUES (generate_ulid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id",
+		newAutomation.Name, pq.Array(newAutomation.Trigger), pq.Array(newAutomation.TriggerKey), pq.Array(newAutomation.TriggerOperator), pq.Array(newAutomation.TriggerValue), pq.Array(newAutomation.Action), pq.Array(newAutomation.ActionCall), pq.Array(newAutomation.ActionValue), newAutomation.Status, newAutomation.CreatorID, newAutomation.HomeID)
 	if err != nil {
 		contextLogger := logger.WithFields(logger.Fields{"code": "CSAAA005"})
 		contextLogger.Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
 			Code:  "CSAAA005",
+			Error: "Automation can't be created",
+		})
+	}
+
+	var automationID string
+	row.Next()
+	err = row.Scan(&automationID)
+	if err != nil {
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSAAA006"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:  "CSAAA006",
 			Error: "Automation can't be created",
 		})
 	}

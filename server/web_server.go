@@ -2,13 +2,9 @@ package server
 
 import (
 	"net/http"
-	"time"
-
-	cryptorand "crypto/rand"
 
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
-	"github.com/oklog/ulid/v2"
 )
 
 // MessageResponse define json response for API
@@ -25,12 +21,6 @@ type ErrorResponse struct {
 // DataReponse define json response for API
 type DataReponse struct {
 	Data interface{} `json:"data"`
-}
-
-// NewULID create an ulid
-func NewULID() ulid.ULID {
-	id, _ := ulid.New(ulid.Timestamp(time.Now()), cryptorand.Reader)
-	return id
 }
 
 // Start start echo server
