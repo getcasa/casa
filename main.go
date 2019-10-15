@@ -19,7 +19,7 @@ func main() {
 		FileLocation:      "log.log",
 	}
 
-	err := logger.NewLogger(config, logger.InstanceZapLogger)
+	err := logger.NewLogger(config)
 	if err != nil {
 		log.Fatalf("Could not instantiate log %s", err.Error())
 	}

@@ -21,11 +21,6 @@ const (
 	Fatal = "fatal"
 )
 
-//InstanceZapLogger int
-const (
-	InstanceZapLogger int = iota
-)
-
 var (
 	errInvalidLoggerInstance = errors.New("Invalid logger instance")
 )
@@ -33,22 +28,15 @@ var (
 //Logger is our contract for the logger
 type Logger interface {
 	Debugf(format string, args ...interface{})
-
 	Infof(format string, args ...interface{})
-
 	Warnf(format string, args ...interface{})
-
 	Errorf(format string, args ...interface{})
-
 	Fatalf(format string, args ...interface{})
-
 	Panicf(format string, args ...interface{})
-
 	WithFields(keyValues Fields) Logger
 }
 
 // Configuration stores the config for the logger
-// For some loggers there can only be one level across writers, for such the level of Console is picked by default
 type Configuration struct {
 	EnableConsole     bool
 	ConsoleJSONFormat bool
@@ -60,19 +48,13 @@ type Configuration struct {
 }
 
 //NewLogger returns an instance of logger
-func NewLogger(config Configuration, loggerInstance int) error {
-	switch loggerInstance {
-	case InstanceZapLogger:
-		logger, err := newZapLogger(config)
-		if err != nil {
-			return err
-		}
-		log = logger
-		return nil
-
-	default:
-		return errInvalidLoggerInstance
+func NewLogger(config Configuration) error {
+	logger, err := newZapLogger(config)
+	if err != nil {
+		return err
 	}
+	log = logger
+	return nil
 }
 
 //Debugf log debug message
