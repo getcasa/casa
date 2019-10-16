@@ -77,6 +77,7 @@ type Device struct {
 	Icon         sql.NullString `db:"icon" json:"icon"`
 	PhysicalID   string         `db:"physical_id" json:"physicalId"`
 	PhysicalName string         `db:"physical_name" json:"physicalName"`
+	Config       string         `db:"config" json:"config"`
 	Plugin       string         `db:"plugin" json:"plugin"`
 	RoomID       string         `db:"room_id" json:"roomId"`
 	CreatedAt    string         `db:"created_at" json:"createdAt"`

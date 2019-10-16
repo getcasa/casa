@@ -260,16 +260,20 @@ type syncedDatas struct {
 }
 
 type automationScan struct {
-	ID           string
-	Name         string
-	Trigger      []string
-	TriggerValue []string `db:"trigger_value" json:"triggerValue"`
-	Action       []string
-	ActionValue  []string `db:"action_value" json:"actionValue"`
-	Status       bool
-	CreatedAt    string `db:"created_at" json:"createdAt"`
-	CreatorID    string `db:"creator_id" json:"creatorID"`
-	HomeID       string `db:"home_id" json:"homeID"`
+	ID              string
+	HomeID          string `db:"home_id" json:"homeID"`
+	Name            string
+	Trigger         []string
+	TriggerKey      []string `db:"trigger_key" json:"triggerKey"`
+	TriggerValue    []string `db:"trigger_value" json:"triggerValue"`
+	TriggerOperator []string `db:"trigger_operator" json:"triggerOperator"`
+	Action          []string
+	ActionCall      []string `db:"action_call" json:"actionCall"`
+	ActionValue     []string `db:"action_value" json:"actionValue"`
+	Status          bool
+	CreatedAt       string `db:"created_at" json:"createdAt"`
+	UpdatedAt       string `db:"updated_at" json:"updatedAt"`
+	CreatorID       string `db:"creator_id" json:"creatorID"`
 }
 
 // SyncGateway sync datas with gateway
@@ -343,7 +347,7 @@ func SyncGateway(c echo.Context) error {
 		})
 	}
 
-	err = DB.Select(&synced.Users, `SELECT DISTINCT users.* FROM users JOIN permissions ON users.id = permissions.user_id WHERE permissions.type_id = $1 AND permissions.type = 'home'`, synced.Gateway.HomeID)
+	err = DB.Select(&synced.Users, `SELECT DISTINCT users.id, users.firstname, users.lastname, users.email, users.birthdate, users.created_at, users.updated_at FROM users JOIN permissions ON users.id = permissions.user_id WHERE permissions.type_id = $1 AND permissions.type = 'home'`, synced.Gateway.HomeID)
 	if err != nil {
 		contextLogger := logger.WithFields(logger.Fields{"code": "CSGSG007"})
 		contextLogger.Errorf("%s", err.Error())
@@ -366,7 +370,7 @@ func SyncGateway(c echo.Context) error {
 	var automations []Automation
 	for rows.Next() {
 		var auto automationScan
-		err := rows.Scan(&auto.ID, &auto.HomeID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerValue), pq.Array(&auto.Action), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.CreatorID)
+		err := rows.Scan(&auto.ID, &auto.HomeID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerKey), pq.Array(&auto.TriggerValue), pq.Array(&auto.TriggerOperator), pq.Array(&auto.Action), pq.Array(&auto.ActionCall), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.UpdatedAt, &auto.CreatorID)
 		if err != nil {
 			contextLogger := logger.WithFields(logger.Fields{"code": "CSGSG009"})
 			contextLogger.Errorf("%s", err.Error())
