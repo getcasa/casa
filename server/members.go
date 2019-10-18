@@ -71,9 +71,9 @@ func GetMembers(c echo.Context) error {
 		})
 	}
 
-	return c.JSON(http.StatusOK, DataReponse{
-		Data: members,
-	})
+	totalMembers := strconv.Itoa(len(members))
+	c.Response().Header().Set("Content-Range", "0-"+totalMembers+"/"+totalMembers)
+	return c.JSON(http.StatusOK, members)
 }
 
 type addMemberReq struct {
