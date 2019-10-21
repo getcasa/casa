@@ -380,16 +380,20 @@ func SyncGateway(c echo.Context) error {
 			})
 		}
 		automations = append(automations, Automation{
-			ID:           auto.ID,
-			Name:         auto.Name,
-			Trigger:      auto.Trigger,
-			TriggerValue: auto.TriggerValue,
-			Action:       auto.Action,
-			ActionValue:  auto.ActionValue,
-			Status:       auto.Status,
-			CreatedAt:    auto.CreatedAt,
-			CreatorID:    auto.CreatorID,
-			HomeID:       auto.HomeID,
+			ID:              auto.ID,
+			Name:            auto.Name,
+			Trigger:         auto.Trigger,
+			TriggerKey:      auto.TriggerKey,
+			TriggerValue:    auto.TriggerValue,
+			TriggerOperator: auto.TriggerOperator,
+			Action:          auto.Action,
+			ActionCall:      auto.ActionCall,
+			ActionValue:     auto.ActionValue,
+			Status:          auto.Status,
+			CreatedAt:       auto.CreatedAt,
+			UpdatedAt:       auto.UpdatedAt,
+			CreatorID:       auto.CreatorID,
+			HomeID:          auto.HomeID,
 		})
 	}
 
@@ -408,6 +412,7 @@ type permissionGateway struct {
 	GatewayHomeID    sql.NullString `db:"g_homeid"`
 	GatewayModel     string         `db:"g_model"`
 	GatewayCreatedAt string         `db:"g_createdat"`
+	GatewayUpdatedAt string         `db:"g_updatedat"`
 }
 
 type gatewayRes struct {
@@ -416,6 +421,7 @@ type gatewayRes struct {
 	Name      sql.NullString `json:"name"`
 	Model     string         `json:"model"`
 	CreatedAt string         `json:"created_at"`
+	UpdatedAt string         `json:"updated_at"`
 	Creator   User           `json:"creator"`
 	Read      int            `json:"read"`
 	Write     int            `json:"write"`
@@ -454,7 +460,7 @@ func GetGateway(c echo.Context) error {
 
 	row = DB.QueryRowx(`
 		SELECT permissions.*, users.*,
-		gateways.id as g_id,	gateways.name AS g_name, gateways.home_id AS g_homeid, gateways.model AS g_model, gateways.created_at AS g_createdat FROM permissions
+		gateways.id as g_id,	gateways.name AS g_name, gateways.home_id AS g_homeid, gateways.model AS g_model, gateways.created_at AS g_createdat, gateways.updated_at AS g_updatedat FROM permissions
 		JOIN gateways ON permissions.type_id = gateways.home_id
 		JOIN users ON gateways.creator_id = users.id
 		WHERE type=$1 AND type_id=$2 AND user_id=$3
@@ -487,6 +493,7 @@ func GetGateway(c echo.Context) error {
 			Name:      permission.GatewayName,
 			Model:     permission.GatewayModel,
 			CreatedAt: permission.GatewayCreatedAt,
+			UpdatedAt: permission.GatewayUpdatedAt,
 			Creator:   permission.User,
 			Read:      permission.Permission.Read,
 			Write:     permission.Permission.Write,
