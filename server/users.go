@@ -13,9 +13,7 @@ func GetUser(c echo.Context) error {
 	reqUser := c.Get("user").(User)
 
 	if c.Param("userId") == "me" || c.Param("userId") == reqUser.ID {
-		return c.JSON(http.StatusOK, DataReponse{
-			Data: reqUser,
-		})
+		return c.JSON(http.StatusOK, reqUser)
 	}
 
 	err := errors.New("Wrong parameters")
