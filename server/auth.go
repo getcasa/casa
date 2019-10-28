@@ -59,20 +59,29 @@ func SignUp(c echo.Context) error {
 		})
 	}
 
-	birthdate, err := time.Parse(time.RFC3339, req.Birthdate)
-	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSASU004"})
-		contextLogger.Errorf("%s", err.Error())
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSASU004",
-			Error: "Birthdate can't be parsed",
-		})
+	var birthdate time.Time
+
+	if req.Birthdate != "" {
+		birthdate, err = time.Parse(time.RFC3339, req.Birthdate)
+		if err != nil {
+			contextLogger := logger.WithFields(logger.Fields{"code": "CSASU004"})
+			contextLogger.Errorf("%s", err.Error())
+			return c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Code:  "CSASU004",
+				Error: "Birthdate can't be parsed",
+			})
+		}
+	}
+
+	firstname := req.Firstname
+	if firstname == "" {
+		firstname = strings.Split(req.Email, "@")[0]
 	}
 
 	newUser := User{
 		Email:     req.Email,
 		Password:  string(hashedPassword),
-		Firstname: req.Firstname,
+		Firstname: firstname,
 		Lastname:  req.Lastname,
 		Birthdate: birthdate.Format("2006-01-02 00:00:00"),
 	}
