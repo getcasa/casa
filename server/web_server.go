@@ -139,6 +139,7 @@ func Start(port string) {
 	v1.GET("/users/:userId", GetUser)
 	v1.PUT("/users/:userId", UpdateUserProfil)
 	v1.PUT("/users/:userId/email", UpdateUserEmail)
+	v1.PUT("/users/:userId/password", UpdateUserPassword)
 
 	e.Logger.Fatal(e.Start(":" + port))
 }

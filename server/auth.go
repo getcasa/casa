@@ -185,7 +185,6 @@ func IsAuthenticated(key string, c echo.Context) (bool, error) {
 		return false, nil
 	}
 
-	token.User.Password = ""
 	c.Set("user", token.User)
 
 	return true, nil

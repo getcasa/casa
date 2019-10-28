@@ -8,6 +8,7 @@ import (
 	"github.com/ItsJimi/casa/logger"
 	"github.com/ItsJimi/casa/utils"
 	"github.com/labstack/echo"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // GetUser route get user by id
@@ -137,5 +138,90 @@ func UpdateUserEmail(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, MessageResponse{
 		Message: "User email has been updated",
+	})
+}
+
+type updateUserPasswordReq struct {
+	Password                string
+	NewPassword             string
+	NewPasswordConfirmation string
+}
+
+// UpdateUserPassword route update user password
+func UpdateUserPassword(c echo.Context) error {
+	req := new(updateUserPasswordReq)
+	if err := c.Bind(req); err != nil {
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSUUUPA001"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:  "CSUUUPA001",
+			Error: "Wrong parameters",
+		})
+	}
+
+	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Password", "NewPassword", "NewPasswordConfirmation"}); err != nil {
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSUUUPA002"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:  "CSUUUPA002",
+			Error: err.Error(),
+		})
+	}
+
+	reqUser := c.Get("user").(User)
+
+	if reqUser.ID != c.Param("userId") {
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSUUUPA003"})
+		contextLogger.Errorf("%s", "Unauthorized")
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{
+			Code:  "CSUUUPA003",
+			Error: "Unauthorized",
+		})
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(reqUser.Password), []byte(req.Password)); err != nil {
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSUUUPA004"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:  "CSUUUPA004",
+			Error: "Password doesn't match",
+		})
+	}
+
+	if req.NewPassword != req.NewPasswordConfirmation {
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSUUUPA005"})
+		contextLogger.Warnf("New passwords mismatch")
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:  "CSUUUPA005",
+			Error: "New passwords mismatch",
+		})
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), 14)
+	if err != nil {
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSUUUPA006"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:  "CSUUUPA006",
+			Error: "New password can't be encrypted",
+		})
+	}
+
+	_, err = DB.Exec(`
+		UPDATE users
+		SET password=$1
+		WHERE id=$2
+	`, hashedPassword, c.Param("userId"))
+	if err != nil {
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSUUUPA007"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:  "CSUUUPA007",
+			Error: "User password can't be updated",
+		})
+	}
+
+	return c.JSON(http.StatusOK, MessageResponse{
+		Message: "User password has been updated",
 	})
 }
