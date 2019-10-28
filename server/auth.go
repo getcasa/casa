@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/ItsJimi/casa/logger"
@@ -155,6 +156,27 @@ func SignIn(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, MessageResponse{
 		Message: id,
+	})
+}
+
+// SignOut route logout user and delete his token
+func SignOut(c echo.Context) error {
+	token := strings.Split(c.Request().Header.Get("Authorization"), " ")[1]
+	_, err := DB.Exec(`
+		DELETE FROM tokens
+		WHERE id=$1
+	`, token)
+	if err != nil {
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSASO001"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:  "CSASO001",
+			Error: "Token can't be delete",
+		})
+	}
+
+	return c.JSON(http.StatusOK, MessageResponse{
+		Message: "You've been disconnected and your token has been deleted",
 	})
 }
 

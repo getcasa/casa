@@ -50,6 +50,9 @@ func Start(port string) {
 	// Check authorization
 	v1.Use(middleware.KeyAuth(IsAuthenticated))
 
+	// Signout
+	v1.POST("/signout", SignOut)
+
 	// Gateway
 	v1.POST("/gateway", AddGateway)
 	v1.PUT("/gateway/:id", UpdateGateway)
