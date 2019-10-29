@@ -26,14 +26,23 @@ func AddHome(c echo.Context) error {
 		})
 	}
 
-	user := c.Get("user").(User)
-
-	row, err := DB.Query("INSERT INTO homes (id, name, address, creator_id) VALUES (generate_ulid(), $1, $2, $3) RETURNING id;", req.Name, req.Address, user.ID)
-	if err != nil {
+	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Name"}); err != nil {
 		contextLogger := logger.WithFields(logger.Fields{"code": "CSHAH002"})
 		contextLogger.Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
 			Code:  "CSHAH002",
+			Error: err.Error(),
+		})
+	}
+
+	user := c.Get("user").(User)
+
+	row, err := DB.Query("INSERT INTO homes (id, name, address, creator_id) VALUES (generate_ulid(), $1, $2, $3) RETURNING id;", req.Name, req.Address, user.ID)
+	if err != nil {
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSHAH003"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:  "CSHAH003",
 			Error: "Home can't be added",
 		})
 	}
@@ -41,10 +50,10 @@ func AddHome(c echo.Context) error {
 	row.Next()
 	err = row.Scan(&homeID)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSHAH003"})
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSHAH004"})
 		contextLogger.Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSHAH003",
+			Code:  "CSHAH004",
 			Error: "Home can't be added",
 		})
 	}
@@ -60,10 +69,10 @@ func AddHome(c echo.Context) error {
 	}
 	_, err = DB.NamedExec("INSERT INTO permissions (id, user_id, type, type_id, read, write, manage, admin) VALUES (generate_ulid(), :user_id, :type, :type_id, :read, :write, :manage, :admin)", newPermission)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSHAH004"})
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSHAH005"})
 		contextLogger.Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSHAH004",
+			Code:  "CSHAH005",
 			Error: "Home can't be added",
 		})
 	}
