@@ -47,6 +47,8 @@ func Start(port string) {
 	v1.POST("/gateway/link", LinkGateway)
 	v1.GET("/gateway/sync/:id", SyncGateway)
 
+	v1.GET("/ws", InitConnection)
+
 	// Check authorization
 	v1.Use(middleware.KeyAuth(IsAuthenticated))
 

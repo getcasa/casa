@@ -99,6 +99,16 @@ CREATE TABLE IF NOT EXISTS automations (
   creator_id TEXT NOT NULL REFERENCES users (id)
 );
 
+CREATE TABLE IF NOT EXISTS datas (
+  id TEXT PRIMARY KEY,
+  device_id TEXT NOT NULL REFERENCES devices (id) ON DELETE CASCADE,
+  field TEXT NOT NULL,
+  value_nbr DOUBLE PRECISION,
+  value_str TEXT,
+  value_bool BOOLEAN,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE EXTENSION moddatetime;
 CREATE TRIGGER update_date_users BEFORE UPDATE ON users FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);
 CREATE TRIGGER update_date_tokens BEFORE UPDATE ON tokens FOR EACH ROW EXECUTE PROCEDURE moddatetime(updated_at);

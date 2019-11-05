@@ -117,6 +117,17 @@ type Automation struct {
 	CreatorID       string   `db:"creator_id" json:"creatorId"`
 }
 
+// Datas struct in database
+type Datas struct {
+	ID        string  `db:"id" json:"id"`
+	DeviceID  string  `db:"device_id" json:"deviceId"`
+	Field     string  `db:"field" json:"field"`
+	ValueNbr  float64 `db:"value_nbr" json:"valueNbr"`
+	ValueStr  string  `db:"value_str" json:"valueStr"`
+	ValueBool bool    `db:"value_bool" json:"valueBool"`
+	CreatedAt string  `db:"created_at" json:"createdAt"`
+}
+
 // DB define the database object
 var DB *sqlx.DB
 
