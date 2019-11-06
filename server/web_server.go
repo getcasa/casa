@@ -45,8 +45,9 @@ func Start(port string) {
 
 	// Link Gateway
 	v1.POST("/gateway/link", LinkGateway)
-	v1.GET("/gateway/sync/:id", SyncGateway)
+	v1.POST("/gateway/:gatewayId/plugins", AddPlugin)
 
+	// WS
 	v1.GET("/ws", InitConnection)
 
 	// Check authorization
