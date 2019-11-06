@@ -44,7 +44,7 @@ func Start(port string) {
 	v1.POST("/signin", SignIn)
 
 	// Link Gateway
-	v1.POST("/gateway/link", LinkGateway)
+	v1.POST("/gateway", AddGateway)
 	v1.POST("/gateway/:gatewayId/plugins", AddPlugin)
 
 	// WS
@@ -57,7 +57,7 @@ func Start(port string) {
 	v1.POST("/signout", SignOut)
 
 	// Gateway
-	v1.POST("/gateway", AddGateway)
+	v1.POST("/gateway/link", LinkGateway)
 	v1.PUT("/gateway/:id", UpdateGateway)
 	v1.DELETE("/gateway/:id", DeleteGateway)
 	v1.GET("/gateway/:id", GetGateway)
