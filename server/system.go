@@ -24,6 +24,7 @@ type WebsocketMessage struct {
 type ActionMessage struct {
 	Plugin string
 	Call   string
+	Config string
 	Params string
 }
 
@@ -237,7 +238,8 @@ func Automations() {
 								act := ActionMessage{
 									Plugin: device.Plugin,
 									Call:   auto.ActionCall[i],
-									Params: device.Config,
+									Config: device.Config,
+									Params: auto.ActionValue[i],
 								}
 
 								marshAct, _ := json.Marshal(act)
