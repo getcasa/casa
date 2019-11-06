@@ -46,7 +46,7 @@ func Start(port string) {
 	// Link Gateway
 	v1.POST("/gateway", AddGateway)
 	v1.POST("/gateway/:gatewayId/plugins", AddPlugin)
-	v1.POST("/gateway/:gatewayId/plugins/:pluginName", GetPlugin)
+	v1.GET("/gateway/:gatewayId/plugins/:pluginName", GetPlugin)
 
 	// WS
 	v1.GET("/ws", InitConnection)
