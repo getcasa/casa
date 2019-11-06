@@ -4,6 +4,8 @@ go 1.12
 
 require (
 	github.com/cespare/reflex v0.2.0 // indirect
+	github.com/getcasa/sdk v0.0.0-20191105095754-6df142bc28a9
+	github.com/gorilla/websocket v1.4.1
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/kr/pty v1.1.8 // indirect

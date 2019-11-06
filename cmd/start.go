@@ -18,8 +18,8 @@ var startCmd = &cobra.Command{
 		if len(args) > 0 {
 			port = args[0]
 		}
-
 		server.StartDB()
+		go server.Automations()
 		server.Start(port)
 	},
 }
