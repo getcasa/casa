@@ -3,6 +3,7 @@ module github.com/ItsJimi/casa
 go 1.12
 
 require (
+	github.com/anvie/port-scanner v0.0.0-20180225151059-8159197d3770 // indirect
 	github.com/cespare/reflex v0.2.0 // indirect
 	github.com/getcasa/sdk v0.0.0-20191105095754-6df142bc28a9
 	github.com/gorilla/websocket v1.4.1

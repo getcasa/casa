@@ -14,7 +14,7 @@ var startCmd = &cobra.Command{
 	Short: "Start casa server",
 	Long:  "Start casa server.",
 	Run: func(cmd *cobra.Command, args []string) {
-		port := "3000"
+		port := "4353"
 		if len(args) > 0 {
 			port = args[0]
 		}

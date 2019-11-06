@@ -37,27 +37,37 @@ var upgrader = websocket.Upgrader{
 }
 
 // GetConfigFromGateway get config from gateway
-func GetConfigFromGateway() {
-	resp, err := http.Get("http://127.0.0.1:4000/v1/configs")
+func GetConfigFromGateway(addr string) {
+	var tmpConfigs []sdk.Configuration
+
+	fmt.Println(addr)
+	resp, err := http.Get("http://" + addr + "/v1/configs")
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSSGCFG001"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSSGCFG001"}).Errorf("%s", err.Error())
 		return
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSSGCFG002"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSSGCFG002"}).Errorf("%s", err.Error())
 		return
 	}
 
-	err = json.Unmarshal(body, &configs)
+	err = json.Unmarshal(body, &tmpConfigs)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSSGCFG003"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSSGCFG003"}).Errorf("%s", err.Error())
 		return
+	}
+
+	if len(configs) == 0 {
+		configs = tmpConfigs
+	} else {
+		for _, tmpConf := range tmpConfigs {
+			if configFromPlugin(configs, tmpConf.Name).Name == "" {
+				configs = append(configs, tmpConf)
+			}
+		}
 	}
 }
 
@@ -88,7 +98,7 @@ func InitConnection(con echo.Context) error {
 
 		switch wm.Action {
 		case "newConnection":
-			GetConfigFromGateway()
+			GetConfigFromGateway(string(wm.Body))
 		case "newData":
 			var datas Datas
 			json.Unmarshal(wm.Body, &datas)
@@ -126,7 +136,7 @@ func SaveNewDatas(queue Datas) {
 	}
 	queue.DeviceID = device.ID
 
-	if FindFieldFromName(FindTriggerFromName(configFromPlugin(device.Plugin).Triggers, device.PhysicalName).Fields, queue.Field).Direct {
+	if FindFieldFromName(FindTriggerFromName(configFromPlugin(configs, device.Plugin).Triggers, device.PhysicalName).Fields, queue.Field).Direct {
 		queues = append(queues, queue)
 	}
 
@@ -154,7 +164,7 @@ func Automations() {
 					for i := 0; i < len(auto.Trigger); i++ {
 						var device Device
 						err = DB.Get(&device, `SELECT * FROM devices WHERE id = $1`, auto.Trigger[i])
-						field := FindFieldFromName(FindTriggerFromName(configFromPlugin(device.Plugin).Triggers, device.PhysicalName).Fields, auto.TriggerKey[i])
+						field := FindFieldFromName(FindTriggerFromName(configFromPlugin(configs, device.Plugin).Triggers, device.PhysicalName).Fields, auto.TriggerKey[i])
 
 						if field.Direct {
 							queue := FindDataFromID(queues, device.ID)
@@ -284,8 +294,8 @@ func checkConditionOperator(conditions []string) bool {
 	return false
 }
 
-func configFromPlugin(name string) sdk.Configuration {
-	for _, config := range configs {
+func configFromPlugin(configurations []sdk.Configuration, name string) sdk.Configuration {
+	for _, config := range configurations {
 		if config.Name == name {
 			return config
 		}
