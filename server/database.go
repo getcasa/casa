@@ -48,6 +48,16 @@ type Gateway struct {
 	CreatorID sql.NullString `db:"creator_id" json:"creatorId"`
 }
 
+// Plugin structure in database
+type Plugin struct {
+	ID        string `db:"id" json:"id"`
+	GatewayID string `db:"gateway_id" json:"gatewayId"`
+	Name      string `db:"name" json:"name"`
+	Config    string `db:"config" json:"config"`
+	CreatedAt string `db:"created_at" json:"createdAt"`
+	UpdatedAt string `db:"updated_at" json:"updatedAt"`
+}
+
 // Home structure in database
 type Home struct {
 	ID        string `db:"id" json:"id"`
