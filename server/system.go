@@ -38,7 +38,7 @@ var upgrader = websocket.Upgrader{
 
 // GetConfigFromGateway get config from gateway
 func GetConfigFromGateway() {
-	resp, err := http.Get("http://192.168.1.46:3001/v1/configs")
+	resp, err := http.Get("http://127.0.0.1:4000/v1/configs")
 	if err != nil {
 		contextLogger := logger.WithFields(logger.Fields{"code": "CSSGCFG001"})
 		contextLogger.Errorf("%s", err.Error())
@@ -59,8 +59,6 @@ func GetConfigFromGateway() {
 		contextLogger.Errorf("%s", err.Error())
 		return
 	}
-
-	fmt.Println(configs)
 }
 
 // InitConnection create websocket connection
@@ -151,7 +149,7 @@ func Automations() {
 				var auto Automation
 				err := rows.Scan(&auto.ID, &auto.HomeID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerKey), pq.Array(&auto.TriggerValue), pq.Array(&auto.TriggerOperator), pq.Array(&auto.Action), pq.Array(&auto.ActionCall), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.UpdatedAt, &auto.CreatorID)
 				if err == nil {
-					count := 0
+					var conditions []string
 
 					for i := 0; i < len(auto.Trigger); i++ {
 						var device Device
@@ -164,13 +162,13 @@ func Automations() {
 								switch field.Type {
 								case "string":
 									if queue.ValueStr == auto.TriggerValue[i] {
-										count++
+										conditions = append(conditions, "1")
 									}
 								case "int":
 									triggerValue, err := strconv.ParseFloat(string(auto.TriggerValue[i]), 64)
 									if err == nil {
 										if queue.ValueNbr == triggerValue {
-											count++
+											conditions = append(conditions, "1")
 										}
 									}
 								case "bool":
@@ -183,7 +181,7 @@ func Automations() {
 							switch field.Type {
 							case "string":
 								if data.ValueStr == auto.TriggerValue[i] {
-									count++
+									conditions = append(conditions, "1")
 								}
 							case "int":
 								firstchar := string(auto.TriggerValue[i][0])
@@ -192,15 +190,15 @@ func Automations() {
 									switch firstchar {
 									case ">":
 										if data.ValueNbr > value {
-											count++
+											conditions = append(conditions, "1")
 										}
 									case "<":
 										if data.ValueNbr < value {
-											count++
+											conditions = append(conditions, "1")
 										}
 									case "=":
 										if data.ValueNbr == value {
-											count++
+											conditions = append(conditions, "1")
 										}
 									default:
 									}
@@ -209,11 +207,18 @@ func Automations() {
 							default:
 							}
 						}
+						if len(conditions) == 0 {
+							conditions = append(conditions, "0")
+						}
+						if conditions[len(conditions)-1] != "0" && conditions[len(conditions)-1] != "1" {
+							conditions = append(conditions, "0")
+						}
+						if len(auto.TriggerOperator) >= 1 && len(auto.TriggerOperator) > i {
+							conditions = append(conditions, auto.TriggerOperator[i])
+						}
 					}
 
-					// fmt.Println(count)
-
-					if count == len(auto.Trigger) {
+					if checkConditionOperator(conditions) {
 						for i := 0; i < len(auto.Action); i++ {
 							var device Device
 							err = DB.Get(&device, `SELECT * FROM devices WHERE id = $1`, auto.Action[i])
@@ -239,8 +244,6 @@ func Automations() {
 									logger.WithFields(logger.Fields{"code": "CSSA001"}).Errorf("%s", err.Error())
 									break
 								}
-
-								// pluginFromName(device.Plugin).CallAction(auto.ActionCall[i], []byte(device.Config))
 							}
 						}
 					}
@@ -251,6 +254,34 @@ func Automations() {
 	}
 
 	go Automations()
+}
+
+func checkConditionOperator(conditions []string) bool {
+	index := 0
+	groups := []bool{false}
+	for i := 0; i < len(conditions); i++ {
+		if conditions[i] == "1" && len(conditions) <= i+1 {
+			groups[index] = true
+		}
+		if conditions[i] == "AND" {
+			if conditions[i-1] == "1" && conditions[i+1] == "1" {
+				groups[index] = true
+			} else {
+				groups[index] = false
+			}
+		} else if conditions[i] == "OR" {
+			index++
+			groups = append(groups, false)
+		}
+	}
+
+	for _, group := range groups {
+		if group {
+			return true
+		}
+	}
+
+	return false
 }
 
 func configFromPlugin(name string) sdk.Configuration {
