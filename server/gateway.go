@@ -385,3 +385,33 @@ func AddPlugin(c echo.Context) error {
 		Message: req.Name + " has been added",
 	})
 }
+
+// GetPlugin route get a gateway plugin
+func GetPlugin(c echo.Context) error {
+	row := DB.QueryRowx(`
+		SELECT * FROM plugins
+		WHERE gateway_id=$1 AND name=$2
+	 `, c.Param("gatewayId"), c.Param("pluginName"))
+
+	if row == nil {
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSSGGP001"})
+		contextLogger.Errorf("QueryRowx: Select plugin")
+		return c.JSON(http.StatusNotFound, ErrorResponse{
+			Code:  "CSSGGP001",
+			Error: "Plugin not found",
+		})
+	}
+
+	var plugin Plugin
+	err := row.StructScan(&plugin)
+	if err != nil {
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSSGGP002"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:  "CSSGGP002",
+			Error: "Plugin can't be found",
+		})
+	}
+
+	return c.JSON(http.StatusOK, plugin)
+}
