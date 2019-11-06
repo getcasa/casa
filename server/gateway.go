@@ -2,15 +2,12 @@ package server
 
 import (
 	"database/sql"
-	"errors"
 	"net/http"
 	"reflect"
-	"strings"
 
 	"github.com/ItsJimi/casa/logger"
 	"github.com/ItsJimi/casa/utils"
 	"github.com/labstack/echo"
-	"github.com/lib/pq"
 	"github.com/oklog/ulid/v2"
 )
 
@@ -249,161 +246,6 @@ func LinkGateway(c echo.Context) error {
 	})
 }
 
-type syncedDatas struct {
-	Home        Home
-	Gateway     Gateway
-	Users       []User
-	Automations []Automation
-	Devices     []Device
-	Rooms       []Room
-	Permissions []Permission
-}
-
-type automationScan struct {
-	ID              string
-	HomeID          string `db:"home_id" json:"homeID"`
-	Name            string
-	Trigger         []string
-	TriggerKey      []string `db:"trigger_key" json:"triggerKey"`
-	TriggerValue    []string `db:"trigger_value" json:"triggerValue"`
-	TriggerOperator []string `db:"trigger_operator" json:"triggerOperator"`
-	Action          []string
-	ActionCall      []string `db:"action_call" json:"actionCall"`
-	ActionValue     []string `db:"action_value" json:"actionValue"`
-	Status          bool
-	CreatedAt       string `db:"created_at" json:"createdAt"`
-	UpdatedAt       string `db:"updated_at" json:"updatedAt"`
-	CreatorID       string `db:"creator_id" json:"creatorID"`
-}
-
-// SyncGateway sync datas with gateway
-func SyncGateway(c echo.Context) error {
-	id := c.Param("id")
-
-	var missingFields []string
-	if id == "" {
-		missingFields = append(missingFields, "id")
-	}
-	if len(missingFields) > 0 {
-		err := errors.New("Some fields missing: " + strings.Join(missingFields, ", "))
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGSG001"})
-		contextLogger.Errorf("%s", err.Error())
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSGSG001",
-			Error: err.Error(),
-		})
-	}
-
-	var synced syncedDatas
-	err := DB.Get(&synced.Gateway, `SELECT * FROM gateways WHERE id=$1`, id)
-	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGSG002"})
-		contextLogger.Errorf("%s", err.Error())
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSGSG002",
-			Error: "Gateway can't be found",
-		})
-	}
-
-	err = DB.Get(&synced.Home, `SELECT * FROM homes WHERE id=$1`, synced.Gateway.HomeID)
-	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGSG003"})
-		contextLogger.Errorf("%s", err.Error())
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSGSG003",
-			Error: "Home can't be found",
-		})
-	}
-
-	err = DB.Select(&synced.Rooms, `SELECT * FROM rooms WHERE home_id=$1`, synced.Gateway.HomeID)
-	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGSG004"})
-		contextLogger.Errorf("%s", err.Error())
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSGSG004",
-			Error: "Rooms can't be found",
-		})
-	}
-
-	err = DB.Select(&synced.Devices, `SELECT DISTINCT devices.* FROM devices JOIN rooms ON devices.room_id = rooms.id WHERE rooms.home_id = $1`, synced.Gateway.HomeID)
-	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGSG005"})
-		contextLogger.Errorf("%s", err.Error())
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSGSG005",
-			Error: "Devices can't be found",
-		})
-	}
-
-	err = DB.Select(&synced.Permissions, `SELECT DISTINCT permissions.* FROM permissions
-	JOIN users ON permissions.user_id = users.id
-	JOIN permissions AS permi ON users.id = permi.user_id WHERE permi.type_id = $1 AND permi.type = 'home'`, synced.Gateway.HomeID)
-	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGSG006"})
-		contextLogger.Errorf("%s", err.Error())
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSGSG006",
-			Error: "Permissions can't be found",
-		})
-	}
-
-	err = DB.Select(&synced.Users, `SELECT DISTINCT users.id, users.firstname, users.lastname, users.email, users.birthdate, users.created_at, users.updated_at FROM users JOIN permissions ON users.id = permissions.user_id WHERE permissions.type_id = $1 AND permissions.type = 'home'`, synced.Gateway.HomeID)
-	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGSG007"})
-		contextLogger.Errorf("%s", err.Error())
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSGSG007",
-			Error: "Members can't be found",
-		})
-	}
-
-	rows, err := DB.Queryx(`SELECT * FROM automations WHERE home_id=$1`, synced.Gateway.HomeID)
-	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGSG008"})
-		contextLogger.Errorf("%s", err.Error())
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSGSG008",
-			Error: "Automations can't be found",
-		})
-	}
-
-	var automations []Automation
-	for rows.Next() {
-		var auto automationScan
-		err := rows.Scan(&auto.ID, &auto.HomeID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerKey), pq.Array(&auto.TriggerValue), pq.Array(&auto.TriggerOperator), pq.Array(&auto.Action), pq.Array(&auto.ActionCall), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.UpdatedAt, &auto.CreatorID)
-		if err != nil {
-			contextLogger := logger.WithFields(logger.Fields{"code": "CSGSG009"})
-			contextLogger.Errorf("%s", err.Error())
-			return c.JSON(http.StatusInternalServerError, ErrorResponse{
-				Code:  "CSGSG009",
-				Error: "Automations can't be found",
-			})
-		}
-		automations = append(automations, Automation{
-			ID:              auto.ID,
-			Name:            auto.Name,
-			Trigger:         auto.Trigger,
-			TriggerKey:      auto.TriggerKey,
-			TriggerValue:    auto.TriggerValue,
-			TriggerOperator: auto.TriggerOperator,
-			Action:          auto.Action,
-			ActionCall:      auto.ActionCall,
-			ActionValue:     auto.ActionValue,
-			Status:          auto.Status,
-			CreatedAt:       auto.CreatedAt,
-			UpdatedAt:       auto.UpdatedAt,
-			CreatorID:       auto.CreatorID,
-			HomeID:          auto.HomeID,
-		})
-	}
-
-	synced.Automations = automations
-
-	return c.JSON(http.StatusOK, DataReponse{
-		Data: synced,
-	})
-}
-
 type permissionGateway struct {
 	Permission
 	User
@@ -500,5 +342,46 @@ func GetGateway(c echo.Context) error {
 			Manage:    permission.Permission.Manage,
 			Admin:     permission.Permission.Admin,
 		},
+	})
+}
+
+type addPluginReq struct {
+	Name   string
+	Config string
+}
+
+// AddPlugin add a plugin configuration for gateway
+func AddPlugin(c echo.Context) error {
+	req := new(addPluginReq)
+	if err := c.Bind(req); err != nil {
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSGAP001"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:  "CSGAP001",
+			Error: "Wrong parameters",
+		})
+	}
+
+	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"ID", "Name", "Config"}); err != nil {
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSHAH002"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:  "CSGAP002",
+			Error: err.Error(),
+		})
+	}
+
+	_, err := DB.Query("INSERT INTO plugins (id, gateway_id, name, config) VALUES (generate_ulid(), $1, $2, $3)", c.Param("gatewayId"), req.Name, req.Config)
+	if err != nil {
+		contextLogger := logger.WithFields(logger.Fields{"code": "CSGAP003"})
+		contextLogger.Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:  "CSGAP003",
+			Error: "Plugin can't be added",
+		})
+	}
+
+	return c.JSON(http.StatusCreated, MessageResponse{
+		Message: req.Name + " has been added",
 	})
 }
