@@ -119,6 +119,9 @@ func Start(port string) {
 	v1.GET("/homes/:homeId/rooms/:roomId/members", GetRoomMembers, func(next echo.HandlerFunc) echo.HandlerFunc {
 		return hasPermission(next, "room", 1, 0, 0, 0)
 	})
+	v1.PUT("/homes/:homeId/rooms/:roomId/members/:userId", EditRoomMember, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "room", 0, 0, 0, 1)
+	})
 
 	// Devices
 	v1.POST("/homes/:homeId/rooms/:roomId/devices", AddDevice, func(next echo.HandlerFunc) echo.HandlerFunc {
