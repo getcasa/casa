@@ -28,24 +28,24 @@ func AddAutomation(c echo.Context) error {
 	if err := c.Bind(req); err != nil {
 		logger.WithFields(logger.Fields{"code": "CSAAA001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSAAA001",
-			Error: "Wrong parameters",
+			Code:    "CSAAA001",
+			Message: "Wrong parameters",
 		})
 	}
 
 	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Name", "Trigger", "TriggerValue", "TriggerKey", "TriggerOperator", "Action", "ActionCall", "ActionValue"}); err != nil {
 		logger.WithFields(logger.Fields{"code": "CSAAA002"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSAAA002",
-			Error: err.Error(),
+			Code:    "CSAAA002",
+			Message: err.Error(),
 		})
 	}
 
 	if len(req.TriggerOperator) != (len(req.Trigger) - 1) {
 		logger.WithFields(logger.Fields{"code": "CSAAA003"}).Errorf("%s", "Number of operator can't match with number of trigger")
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSAAA003",
-			Error: "Number of operator can't match with number of trigger",
+			Code:    "CSAAA003",
+			Message: "Number of operator can't match with number of trigger",
 		})
 	}
 
@@ -71,8 +71,8 @@ func AddAutomation(c echo.Context) error {
 		if err != nil {
 			logger.WithFields(logger.Fields{"code": "CSAAA004"}).Errorf("%s", err.Error())
 			return c.JSON(http.StatusInternalServerError, ErrorResponse{
-				Code:  "CSAAA004",
-				Error: "Trigger device can't be found",
+				Code:    "CSAAA004",
+				Message: "Trigger device can't be found",
 			})
 		}
 	}
@@ -82,8 +82,8 @@ func AddAutomation(c echo.Context) error {
 		if err != nil {
 			logger.WithFields(logger.Fields{"code": "CSAAA005"}).Errorf("%s", err.Error())
 			return c.JSON(http.StatusInternalServerError, ErrorResponse{
-				Code:  "CSAAA005",
-				Error: "Action device can't be found",
+				Code:    "CSAAA005",
+				Message: "Action device can't be found",
 			})
 		}
 	}
@@ -93,8 +93,8 @@ func AddAutomation(c echo.Context) error {
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSAAA005"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSAAA005",
-			Error: "Automation can't be created",
+			Code:    "CSAAA005",
+			Message: "Automation can't be created",
 		})
 	}
 
@@ -104,8 +104,8 @@ func AddAutomation(c echo.Context) error {
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSAAA006"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSAAA006",
-			Error: "Automation can't be created",
+			Code:    "CSAAA006",
+			Message: "Automation can't be created",
 		})
 	}
 
@@ -181,8 +181,8 @@ func DeleteAutomation(c echo.Context) error {
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSADA001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSADA001",
-			Error: "Automation can't be deleted",
+			Code:    "CSADA001",
+			Message: "Automation can't be deleted",
 		})
 	}
 
@@ -218,8 +218,8 @@ func GetAutomations(c echo.Context) error {
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSAGAS001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSAGAS001",
-			Error: "Automations can't be retrieved",
+			Code:    "CSAGAS001",
+			Message: "Automations can't be retrieved",
 		})
 	}
 
@@ -231,8 +231,8 @@ func GetAutomations(c echo.Context) error {
 		if err != nil {
 			logger.WithFields(logger.Fields{"code": "CSAGAS002"}).Errorf("%s", err.Error())
 			return c.JSON(http.StatusInternalServerError, ErrorResponse{
-				Code:  "CSAGAS002",
-				Error: "Error 3: Can't retrieve automations",
+				Code:    "CSAGAS002",
+				Message: "Error 3: Can't retrieve automations",
 			})
 		}
 		automations = append(automations, automationStruct{
@@ -268,8 +268,8 @@ func GetAutomation(c echo.Context) error {
 	if row == nil {
 		logger.WithFields(logger.Fields{"code": "CSAGA001"}).Errorf("QueryRowx: Select automations")
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSAGA001",
-			Error: "Automation can't be found",
+			Code:    "CSAGA001",
+			Message: "Automation can't be found",
 		})
 	}
 
@@ -278,8 +278,8 @@ func GetAutomation(c echo.Context) error {
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSAGA002"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSAGA002",
-			Error: "Automation can't be found",
+			Code:    "CSAGA002",
+			Message: "Automation can't be found",
 		})
 	}
 

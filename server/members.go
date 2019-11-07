@@ -37,11 +37,10 @@ func GetMembers(c echo.Context) error {
 		WHERE permissions.type=$1 AND permissions.type_id=$2
 	`, "home", c.Param("homeId"))
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSMGM001"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSMGM001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSMGM001",
-			Error: "Members can't be retrieved",
+			Code:    "CSMGM001",
+			Message: "Members can't be retrieved",
 		})
 	}
 
@@ -50,11 +49,10 @@ func GetMembers(c echo.Context) error {
 		var permission permissionMember
 		err := rows.StructScan(&permission)
 		if err != nil {
-			contextLogger := logger.WithFields(logger.Fields{"code": "CSMGM002"})
-			contextLogger.Errorf("%s", err.Error())
+			logger.WithFields(logger.Fields{"code": "CSMGM002"}).Errorf("%s", err.Error())
 			return c.JSON(http.StatusInternalServerError, ErrorResponse{
-				Code:  "CSMGM002",
-				Error: "Members can't be retrieved",
+				Code:    "CSMGM002",
+				Message: "Members can't be retrieved",
 			})
 		}
 		members = append(members, memberRes{
@@ -84,20 +82,18 @@ type addMemberReq struct {
 func AddMember(c echo.Context) error {
 	req := new(addMemberReq)
 	if err := c.Bind(req); err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSMAM001"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSMAM001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSMAM001",
-			Error: "Wrong parameters",
+			Code:    "CSMAM001",
+			Message: "Wrong parameters",
 		})
 	}
 
 	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Email"}); err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSMAM002"})
-		contextLogger.Warnf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSMAM002"}).Warnf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSMAM002",
-			Error: err.Error(),
+			Code:    "CSMAM002",
+			Message: err.Error(),
 		})
 	}
 
@@ -105,11 +101,10 @@ func AddMember(c echo.Context) error {
 	err := DB.QueryRowx("SELECT * FROM users WHERE email=$1", req.Email).StructScan(&reqUser)
 
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSMAM003"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSMAM003"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusNotFound, ErrorResponse{
-			Code:  "CSMAM003",
-			Error: "User can't be found",
+			Code:    "CSMAM003",
+			Message: "User can't be found",
 		})
 	}
 
@@ -117,11 +112,10 @@ func AddMember(c echo.Context) error {
 	err = DB.QueryRowx("SELECT * FROM permissions WHERE user_id=$1 AND type_id=$2", reqUser.ID, c.Param("homeId")).StructScan(&permission)
 
 	if err == nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSMAM004"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSMAM004"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSMAM004",
-			Error: reqUser.Firstname + " was already added to your home",
+			Code:    "CSMAM004",
+			Message: reqUser.Firstname + " was already added to your home",
 		})
 	}
 
@@ -130,11 +124,10 @@ func AddMember(c echo.Context) error {
 		VALUES (generate_ulid(), $1, $2, $3, $4, $5, $6, $7, $8)
 	`, reqUser.ID, "home", c.Param("homeId"), 1, 0, 0, 0, time.Now().Format(time.RFC1123))
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSMAM005"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSMAM005"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSMAM005",
-			Error: "User can't be added to your home",
+			Code:    "CSMAM005",
+			Message: "User can't be added to your home",
 		})
 	}
 
@@ -149,10 +142,9 @@ func RemoveMember(c echo.Context) error {
 	err := DB.QueryRowx("SELECT * FROM homes WHERE id=$1", c.Param("homeId")).StructScan(&reqHome)
 
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSMRM001"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSMRM001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusNotFound, ErrorResponse{
-			Error: "Members can't be found",
+			Message: "Members can't be found",
 		})
 	}
 
@@ -160,18 +152,16 @@ func RemoveMember(c echo.Context) error {
 	err = DB.QueryRowx("SELECT * FROM users WHERE id=$1", c.Param("userId")).StructScan(&reqUser)
 
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSMRM002"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSMRM002"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusNotFound, ErrorResponse{
-			Error: "Members can't be found",
+			Message: "Members can't be found",
 		})
 	}
 
 	if reqHome.CreatorID == reqUser.ID {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSMRM003"})
-		contextLogger.Warnf("%s == %s", reqHome.CreatorID, reqUser.ID)
+		logger.WithFields(logger.Fields{"code": "CSMRM003"}).Warnf("%s == %s", reqHome.CreatorID, reqUser.ID)
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "Home's creator can't be removed",
+			Message: "Home's creator can't be removed",
 		})
 	}
 
@@ -180,10 +170,9 @@ func RemoveMember(c echo.Context) error {
 	`, c.Param("userId"), c.Param("homeId"))
 
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSMRM004"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSMRM004"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusNotFound, ErrorResponse{
-			Error: "Member can't be deleted",
+			Message: "Member can't be deleted",
 		})
 	}
 
@@ -203,57 +192,51 @@ type editMemberReq struct {
 func EditMember(c echo.Context) error {
 	req := new(editMemberReq)
 	if err := c.Bind(req); err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSMEM001"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSMEM001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSMEM001",
-			Error: "Wrong parameters",
+			Code:    "CSMEM001",
+			Message: "Wrong parameters",
 		})
 	}
 
 	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Read", "Write", "Manage", "Admin"}); err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSMEM002"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSMEM002"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSMEM002",
-			Error: err.Error(),
+			Code:    "CSMEM002",
+			Message: err.Error(),
 		})
 	}
 
 	read, err := strconv.Atoi(req.Read)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSMEM003"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSMEM003"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSMEM003",
-			Error: "Read has a wrong value",
+			Code:    "CSMEM003",
+			Message: "Read has a wrong value",
 		})
 	}
 	write, err := strconv.Atoi(req.Write)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSMEM004"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSMEM004"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSMEM004",
-			Error: "Write has a wrong value",
+			Code:    "CSMEM004",
+			Message: "Write has a wrong value",
 		})
 	}
 	manage, err := strconv.Atoi(req.Manage)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSMEM005"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSMEM005"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSMEM005",
-			Error: "Manage has a wrong value",
+			Code:    "CSMEM005",
+			Message: "Manage has a wrong value",
 		})
 	}
 	admin, err := strconv.Atoi(req.Admin)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSMEM006"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSMEM006"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSMEM006",
-			Error: "Admin has a wrong value",
+			Code:    "CSMEM006",
+			Message: "Admin has a wrong value",
 		})
 	}
 
@@ -263,11 +246,10 @@ func EditMember(c echo.Context) error {
 		WHERE user_id=$5 AND type=$6 AND type_id=$7
 	`, read, write, manage, admin, c.Param("userId"), "home", c.Param("homeId"))
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSMEM007"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSMEM007"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSMEM007",
-			Error: "Member can't be updated",
+			Code:    "CSMEM007",
+			Message: "Member can't be updated",
 		})
 	}
 

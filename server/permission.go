@@ -17,55 +17,49 @@ func hasPermission(next echo.HandlerFunc, permissionType string, read, write, ma
 		`, reqUser.ID, permissionType, c.Param(permissionType+"Id"))
 
 		if row == nil {
-			contextLogger := logger.WithFields(logger.Fields{"code": "CSPHP001", "userId": reqUser.ID, "type": permissionType, "typeId": c.Param(permissionType + "Id")})
-			contextLogger.Warnf("Unauthorized")
+			logger.WithFields(logger.Fields{"code": "CSPHP001", "userId": reqUser.ID, "type": permissionType, "typeId": c.Param(permissionType + "Id")}).Warnf("Unauthorized")
 			return c.JSON(http.StatusUnauthorized, ErrorResponse{
-				Code:  "CSPHP001",
-				Error: "Unauthorized",
+				Code:    "CSPHP001",
+				Message: "Unauthorized",
 			})
 		}
 
 		var permission Permission
 		err := row.StructScan(&permission)
 		if err != nil {
-			contextLogger := logger.WithFields(logger.Fields{"code": "CSPHP002", "userId": reqUser.ID, "type": permissionType, "typeId": c.Param(permissionType + "Id")})
-			contextLogger.Errorf("%s", err.Error())
+			logger.WithFields(logger.Fields{"code": "CSPHP002", "userId": reqUser.ID, "type": permissionType, "typeId": c.Param(permissionType + "Id")}).Errorf("%s", err.Error())
 			return c.JSON(http.StatusUnauthorized, ErrorResponse{
-				Code:  "CSPHP002",
-				Error: "Unauthorized",
+				Code:    "CSPHP002",
+				Message: "Unauthorized",
 			})
 		}
 
 		if permission.Read != read && permission.Read < read && permission.Admin != 1 {
-			contextLogger := logger.WithFields(logger.Fields{"code": "CSPHP003", "userId": reqUser.ID, "type": permissionType, "typeId": c.Param(permissionType + "Id")})
-			contextLogger.Warnf("Unauthorized")
+			logger.WithFields(logger.Fields{"code": "CSPHP003", "userId": reqUser.ID, "type": permissionType, "typeId": c.Param(permissionType + "Id")}).Warnf("Unauthorized")
 			return c.JSON(http.StatusUnauthorized, ErrorResponse{
-				Code:  "CSPHP003",
-				Error: "Unauthorized",
+				Code:    "CSPHP003",
+				Message: "Unauthorized",
 			})
 		}
 		if permission.Write != write && permission.Write < write && permission.Admin != 1 {
-			contextLogger := logger.WithFields(logger.Fields{"code": "CSPHP004", "userId": reqUser.ID, "type": permissionType, "typeId": c.Param(permissionType + "Id")})
-			contextLogger.Warnf("Unauthorized")
+			logger.WithFields(logger.Fields{"code": "CSPHP004", "userId": reqUser.ID, "type": permissionType, "typeId": c.Param(permissionType + "Id")}).Warnf("Unauthorized")
 			return c.JSON(http.StatusUnauthorized, ErrorResponse{
-				Code:  "CSPHP004",
-				Error: "Unauthorized",
+				Code:    "CSPHP004",
+				Message: "Unauthorized",
 			})
 		}
 		if permission.Manage != manage && permission.Manage < manage && permission.Admin != 1 {
-			contextLogger := logger.WithFields(logger.Fields{"code": "CSPHP005", "userId": reqUser.ID, "type": permissionType, "typeId": c.Param(permissionType + "Id")})
-			contextLogger.Warnf("Unauthorized")
+			logger.WithFields(logger.Fields{"code": "CSPHP005", "userId": reqUser.ID, "type": permissionType, "typeId": c.Param(permissionType + "Id")}).Warnf("Unauthorized")
 			return c.JSON(http.StatusUnauthorized, ErrorResponse{
-				Code:  "CSPHP005",
-				Error: "Unauthorized",
+				Code:    "CSPHP005",
+				Message: "Unauthorized",
 			})
 		}
 		if permission.Admin != admin && permission.Admin < admin {
-			contextLogger := logger.WithFields(logger.Fields{"code": "CSPHP006", "userId": reqUser.ID, "type": permissionType, "typeId": c.Param(permissionType + "Id")})
-			contextLogger.Warnf("Unauthorized")
+			logger.WithFields(logger.Fields{"code": "CSPHP006", "userId": reqUser.ID, "type": permissionType, "typeId": c.Param(permissionType + "Id")}).Warnf("Unauthorized")
 			return c.JSON(http.StatusUnauthorized, ErrorResponse{
-				Code:  "CSPHP006",
-				Error: "Unauthorized",
+				Code:    "CSPHP006",
+				Message: "Unauthorized",
 			})
 		}
 

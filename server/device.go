@@ -25,20 +25,18 @@ type addDeviceReq struct {
 func AddDevice(c echo.Context) error {
 	req := new(addDeviceReq)
 	if err := c.Bind(req); err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDAD001"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSDAD001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSDAD001",
-			Error: "Wrong parameters",
+			Code:    "CSDAD001",
+			Message: "Wrong parameters",
 		})
 	}
 
 	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Name", "GatewayID", "PhysicalID", "PhysicalName", "Plugin", "Config"}); err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDAD002"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSDAD002"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSDAD002",
-			Error: err.Error(),
+			Code:    "CSDAD002",
+			Message: err.Error(),
 		})
 	}
 
@@ -47,33 +45,30 @@ func AddDevice(c echo.Context) error {
 	var device Device
 	err := DB.Get(&device, "SELECT * FROM devices WHERE physical_id=$1 AND gateway_id=$2", req.PhysicalID, req.GatewayID)
 	if err == nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDAD003"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSDAD003"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSDAD003",
-			Error: "Device with the same physical id already exist in this gateway",
+			Code:    "CSDAD003",
+			Message: "Device with the same physical id already exist in this gateway",
 		})
 	}
 
 	row, err := DB.Query("INSERT INTO devices (id, name, icon, room_id, gateway_id, physical_id, physical_name, config, plugin, creator_id) VALUES (generate_ulid(), $1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id;",
 		req.Name, req.Icon, c.Param("roomId"), req.GatewayID, req.PhysicalID, req.PhysicalName, req.Config, req.Plugin, user.ID)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDAD004"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSDAD004"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSDAD004",
-			Error: "Device can't be created",
+			Code:    "CSDAD004",
+			Message: "Device can't be created",
 		})
 	}
 	var deviceID string
 	row.Next()
 	err = row.Scan(&deviceID)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDAD005"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSDAD005"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSDAD005",
-			Error: "Device can't be created",
+			Code:    "CSDAD005",
+			Message: "Device can't be created",
 		})
 	}
 
@@ -88,11 +83,10 @@ func AddDevice(c echo.Context) error {
 	}
 	_, err = DB.NamedExec("INSERT INTO permissions (id, user_id, type, type_id, read, write, manage, admin) VALUES (generate_ulid(), :user_id, :type, :type_id, :read, :write, :manage, :admin)", newPermission)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDAD006"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSDAD006"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSDAD006",
-			Error: "Device can't be created",
+			Code:    "CSDAD006",
+			Message: "Device can't be created",
 		})
 	}
 
@@ -105,20 +99,18 @@ func AddDevice(c echo.Context) error {
 func UpdateDevice(c echo.Context) error {
 	req := new(addDeviceReq)
 	if err := c.Bind(req); err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDUD001"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSDUD001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSDUD001",
-			Error: "Wrong parameters",
+			Code:    "CSDUD001",
+			Message: "Wrong parameters",
 		})
 	}
 
 	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Name", "RoomID"}); err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDUD002"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSDUD002"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSDUD002",
-			Error: err.Error(),
+			Code:    "CSDUD002",
+			Message: err.Error(),
 		})
 	}
 
@@ -127,20 +119,18 @@ func UpdateDevice(c echo.Context) error {
 	var permission Permission
 	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "device", c.Param("deviceId"))
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDUD003"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSDUD003"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusNotFound, ErrorResponse{
-			Code:  "CSDUD003",
-			Error: "Device can't be found",
+			Code:    "CSDUD003",
+			Message: "Device can't be found",
 		})
 	}
 
 	if permission.Manage == 0 && permission.Admin == 0 {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDUD004"})
-		contextLogger.Warnf("Unauthorized")
+		logger.WithFields(logger.Fields{"code": "CSDUD004"}).Warnf("Unauthorized")
 		return c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Code:  "CSDUD004",
-			Error: "Unauthorized modifications",
+			Code:    "CSDUD004",
+			Message: "Unauthorized modifications",
 		})
 	}
 	request := "UPDATE devices SET "
@@ -155,11 +145,10 @@ func UpdateDevice(c echo.Context) error {
 	request += " WHERE id=$1"
 	_, err = DB.Exec(request, c.Param("deviceId"))
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDUD005"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSDUD005"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSDUD005",
-			Error: "Device can't be updated",
+			Code:    "CSDUD005",
+			Message: "Device can't be updated",
 		})
 	}
 
@@ -175,39 +164,35 @@ func DeleteDevice(c echo.Context) error {
 	var permission Permission
 	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "device", c.Param("deviceId"))
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDDD001"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSDDD001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusNotFound, ErrorResponse{
-			Code:  "CSDDD001",
-			Error: "Device can't be found",
+			Code:    "CSDDD001",
+			Message: "Device can't be found",
 		})
 	}
 
 	if permission.Admin == 0 {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDDD002"})
-		contextLogger.Warnf("Unauthorized")
+		logger.WithFields(logger.Fields{"code": "CSDDD002"}).Warnf("Unauthorized")
 		return c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Code:  "CSDDD002",
-			Error: "Unauthorized modifications",
+			Code:    "CSDDD002",
+			Message: "Unauthorized modifications",
 		})
 	}
 
 	_, err = DB.Exec("DELETE FROM devices WHERE id=$1", c.Param("deviceId"))
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDDD003"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSDDD003"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSDDD003",
-			Error: "Device can't be deleted",
+			Code:    "CSDDD003",
+			Message: "Device can't be deleted",
 		})
 	}
 	_, err = DB.Exec("DELETE FROM permissions WHERE type=$1 AND type_id=$2", "device", c.Param("deviceId"))
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDDD004"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSDDD004"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSDDD004",
-			Error: "Device can't be deleted",
+			Code:    "CSDDD004",
+			Message: "Device can't be deleted",
 		})
 	}
 
@@ -263,11 +248,10 @@ func GetDevices(c echo.Context) error {
 		WHERE type=$1 AND user_id=$2 AND (permissions.read=1 OR permissions.admin=1)
 	`, "device", user.ID)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDGDS001"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSDGDS001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSDGDS001",
-			Error: "Devices can't be found",
+			Code:    "CSDGDS001",
+			Message: "Devices can't be found",
 		})
 	}
 
@@ -276,11 +260,10 @@ func GetDevices(c echo.Context) error {
 		var permission permissionDevice
 		err := rows.StructScan(&permission)
 		if err != nil {
-			contextLogger := logger.WithFields(logger.Fields{"code": "CSDGDS002"})
-			contextLogger.Errorf("%s", err.Error())
+			logger.WithFields(logger.Fields{"code": "CSDGDS002"}).Errorf("%s", err.Error())
 			return c.JSON(http.StatusInternalServerError, ErrorResponse{
-				Code:  "CSDGDS002",
-				Error: "Devices can't be found",
+				Code:    "CSDGDS002",
+				Message: "Devices can't be found",
 			})
 		}
 		devices = append(devices, deviceRes{
@@ -318,22 +301,20 @@ func GetDevice(c echo.Context) error {
 	`, "device", c.Param("deviceId"), user.ID)
 
 	if row == nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDGD001"})
-		contextLogger.Errorf("QueryRowx: Select permissions")
+		logger.WithFields(logger.Fields{"code": "CSDGD001"}).Errorf("QueryRowx: Select permissions")
 		return c.JSON(http.StatusNotFound, ErrorResponse{
-			Code:  "CSDGD001",
-			Error: "Device not found",
+			Code:    "CSDGD001",
+			Message: "Device not found",
 		})
 	}
 
 	var permission permissionDevice
 	err := row.StructScan(&permission)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDGD002"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSDGD002"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSDGD002",
-			Error: "Error 4: Can't retrieve devices",
+			Code:    "CSDGD002",
+			Message: "Error 4: Can't retrieve devices",
 		})
 	}
 

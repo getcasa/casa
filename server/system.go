@@ -2,9 +2,7 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -42,7 +40,6 @@ var upgrader = websocket.Upgrader{
 func GetConfigFromGateway(addr string) {
 	var tmpConfigs []sdk.Configuration
 
-	fmt.Println(addr)
 	resp, err := http.Get("http://" + addr + "/v1/configs")
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSSGCFG001"}).Errorf("%s", err.Error())
@@ -89,12 +86,11 @@ func InitConnection(con echo.Context) error {
 		_, message, err := wsconn.ReadMessage()
 		if err != nil {
 			logger.WithFields(logger.Fields{"code": "CSDIC002"}).Errorf("%s", err.Error())
-			log.Println("read:", err)
 			break
 		}
 		err = json.Unmarshal(message, &wm)
 		if err != nil {
-			fmt.Println(err)
+			logger.WithFields(logger.Fields{"code": "CSDIC003"}).Errorf("%s", err.Error())
 			break
 		}
 
@@ -109,20 +105,7 @@ func InitConnection(con echo.Context) error {
 			break
 		}
 
-		log.Printf("recv: %s", message)
-
-		// test := WebsocketMessage{
-		// 	Action: "hello",
-		// 	Body:   []byte("XXX"),
-		// }
-
-		// j, _ := json.Marshal(test)
-
-		// err = wsconn.WriteMessage(websocket.TextMessage, j)
-		// if err != nil {
-		// 	logger.WithFields(logger.Fields{"code": "CSDIC003"}).Errorf("%s", err.Error())
-		// 	break
-		// }
+		logger.WithFields(logger.Fields{}).Debugf("recv: %s", message)
 	}
 	return nil
 }
@@ -252,7 +235,7 @@ func Automations() {
 								}
 
 								marshMessage, _ := json.Marshal(message)
-								fmt.Println("- Send Action -")
+								logger.WithFields(logger.Fields{}).Debugf("Action sent to gateway")
 								err = wsconn.WriteMessage(websocket.TextMessage, marshMessage)
 								if err != nil {
 									logger.WithFields(logger.Fields{"code": "CSSA001"}).Errorf("%s", err.Error())

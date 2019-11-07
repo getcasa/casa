@@ -38,25 +38,22 @@ func AddGateway(c echo.Context) error {
 	req := new(addGatewayReq)
 	err := c.Bind(req)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGAG001"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSGAG001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSGAG001",
-			Error: "Wrong parameters",
+			Code:    "CSGAG001",
+			Message: "Wrong parameters",
 		})
 	} else if req.ID == "" {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGAG002"})
-		contextLogger.Errorf("Missing ID")
+		logger.WithFields(logger.Fields{"code": "CSGAG002"}).Errorf("Missing ID")
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSGAG002",
-			Error: "Empty ID",
+			Code:    "CSGAG002",
+			Message: "Empty ID",
 		})
 	} else if checkUlid(req.ID) != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGAG003"})
-		contextLogger.Errorf("ID mismatch ULID")
+		logger.WithFields(logger.Fields{"code": "CSGAG003"}).Errorf("ID mismatch ULID")
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSGAG003",
-			Error: "Not an ULID",
+			Code:    "CSGAG003",
+			Message: "Not an ULID",
 		})
 	}
 
@@ -66,11 +63,10 @@ func AddGateway(c echo.Context) error {
 	}
 	_, err = DB.NamedExec("INSERT INTO gateways (id, model) VALUES (:id, :model)", newGateway)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGAG004"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSGAG004"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSGAG004",
-			Error: "Error: can't create gateway",
+			Code:    "CSGAG004",
+			Message: "Error: can't create gateway",
 		})
 	}
 
@@ -84,30 +80,27 @@ func UpdateGateway(c echo.Context) error {
 	id := c.Param("id")
 	req := new(updateGatewayReq)
 	if err := c.Bind(req); err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGUG001"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSGUG001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSGUG001",
-			Error: "Wrong parameters",
+			Code:    "CSGUG001",
+			Message: "Wrong parameters",
 		})
 	}
 
 	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Name"}); err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGUG002"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSGUG002"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: err.Error(),
+			Message: err.Error(),
 		})
 	}
 
 	var gateway Gateway
 	err := DB.Get(&gateway, "SELECT * FROM gateways WHERE id=$1", id)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGUG003"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSGUG003"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusNotFound, ErrorResponse{
-			Code:  "CSGUG003",
-			Error: "Gateway can't be found",
+			Code:    "CSGUG003",
+			Message: "Gateway can't be found",
 		})
 	}
 
@@ -116,30 +109,27 @@ func UpdateGateway(c echo.Context) error {
 	var permission Permission
 	err = DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "home", gateway.HomeID)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGUG004"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSGUG004"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusNotFound, ErrorResponse{
-			Code:  "CSGUG004",
-			Error: "Gateway can't be found",
+			Code:    "CSGUG004",
+			Message: "Gateway can't be found",
 		})
 	}
 
 	if permission.Manage == 0 && permission.Admin == 0 {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGUG005"})
-		contextLogger.Warnf("Unauthorized")
+		logger.WithFields(logger.Fields{"code": "CSGUG005"}).Warnf("Unauthorized")
 		return c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Code:  "CSGUG005",
-			Error: "Unauthorized modifications",
+			Code:    "CSGUG005",
+			Message: "Unauthorized modifications",
 		})
 	}
 
 	_, err = DB.Exec("UPDATE gateways SET Name=$1 WHERE id=$2", req.Name, gateway.ID)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGUG006"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSGUG006"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSGUG006",
-			Error: "Gateway can't be updated",
+			Code:    "CSGUG006",
+			Message: "Gateway can't be updated",
 		})
 	}
 
@@ -156,41 +146,37 @@ func DeleteGateway(c echo.Context) error {
 	var gateway Gateway
 	err := DB.Get(&gateway, "SELECT * FROM gateways WHERE id=$1", id)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGDG001"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSGDG001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusNotFound, ErrorResponse{
-			Code:  "CSGDG001",
-			Error: "Gateway can't be found",
+			Code:    "CSGDG001",
+			Message: "Gateway can't be found",
 		})
 	}
 
 	var permission Permission
 	err = DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "home", gateway.HomeID)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGDG002"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSGDG002"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusNotFound, ErrorResponse{
-			Code:  "CSGDG002",
-			Error: "Gateway can't be found",
+			Code:    "CSGDG002",
+			Message: "Gateway can't be found",
 		})
 	}
 
 	if permission.Admin == 0 {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGDG003"})
-		contextLogger.Warnf("Unauthorized")
+		logger.WithFields(logger.Fields{"code": "CSGDG003"}).Warnf("Unauthorized")
 		return c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Code:  "CSGDG003",
-			Error: "Unauthorized modifications",
+			Code:    "CSGDG003",
+			Message: "Unauthorized modifications",
 		})
 	}
 
 	_, err = DB.Exec("DELETE FROM gateways WHERE id=$1", id)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGDG004"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSGDG004"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSGDG004",
-			Error: "Gateway can't be deleted",
+			Code:    "CSGDG004",
+			Message: "Gateway can't be deleted",
 		})
 	}
 
@@ -204,40 +190,36 @@ func LinkGateway(c echo.Context) error {
 	req := new(linkGatewayReq)
 	err := c.Bind(req)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGLG001"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSGLG001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSGLG001",
-			Error: "Wrong parameters",
+			Code:    "CSGLG001",
+			Message: "Wrong parameters",
 		})
 	}
 
 	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"ID", "User", "HomeID"}); err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGLG002"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSGLG002"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: err.Error(),
+			Message: err.Error(),
 		})
 	}
 
 	var gateway Gateway
 	err = DB.Get(&gateway, "SELECT * FROM gateways WHERE id=$1 AND creator_id = '' AND home_id = ''", req.ID)
 	if err == nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGLG003"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSGLG003"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSGLG003",
-			Error: "Gateway is already linked",
+			Code:    "CSGLG003",
+			Message: "Gateway is already linked",
 		})
 	}
 
 	_, err = DB.Exec("UPDATE gateways SET creator_id=$1, home_id=$2 WHERE id=$3", req.User, req.HomeID, req.ID)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGLG004"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSGLG004"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSGLG004",
-			Error: "Error 5: Can't link Gateway",
+			Code:    "CSGLG004",
+			Message: "Error 5: Can't link Gateway",
 		})
 	}
 
@@ -281,22 +263,20 @@ func GetGateway(c echo.Context) error {
 	 `, c.Param("id"))
 
 	if row == nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGGG001"})
-		contextLogger.Errorf("QueryRowx: Select gateways")
+		logger.WithFields(logger.Fields{"code": "CSGGG001"}).Errorf("QueryRowx: Select gateways")
 		return c.JSON(http.StatusNotFound, ErrorResponse{
-			Code:  "CSGGG001",
-			Error: "Gateway not found",
+			Code:    "CSGGG001",
+			Message: "Gateway not found",
 		})
 	}
 
 	var gateway Gateway
 	err := row.StructScan(&gateway)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGSG002"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSGSG002"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSGSG002",
-			Error: "Gateway can't be found",
+			Code:    "CSGSG002",
+			Message: "Gateway can't be found",
 		})
 	}
 
@@ -309,22 +289,20 @@ func GetGateway(c echo.Context) error {
 	`, "home", gateway.HomeID, user.ID)
 
 	if row == nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGSG003"})
-		contextLogger.Errorf("QueryRowx: Select gateways")
+		logger.WithFields(logger.Fields{"code": "CSGSG003"}).Errorf("QueryRowx: Select gateways")
 		return c.JSON(http.StatusNotFound, ErrorResponse{
-			Code:  "CSGSG003",
-			Error: "Gateway can't be found",
+			Code:    "CSGSG003",
+			Message: "Gateway can't be found",
 		})
 	}
 
 	var permission permissionGateway
 	err = row.StructScan(&permission)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGSG04"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSGSG04"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSGSG04",
-			Error: "Gateway can't be found",
+			Code:    "CSGSG04",
+			Message: "Gateway can't be found",
 		})
 	}
 
@@ -354,30 +332,27 @@ type addPluginReq struct {
 func AddPlugin(c echo.Context) error {
 	req := new(addPluginReq)
 	if err := c.Bind(req); err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGAP001"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSGAP001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSGAP001",
-			Error: "Wrong parameters",
+			Code:    "CSGAP001",
+			Message: "Wrong parameters",
 		})
 	}
 
 	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"ID", "Name", "Config"}); err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSHAH002"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSHAH002"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSGAP002",
-			Error: err.Error(),
+			Code:    "CSGAP002",
+			Message: err.Error(),
 		})
 	}
 
 	_, err := DB.Query("INSERT INTO plugins (id, gateway_id, name, config) VALUES (generate_ulid(), $1, $2, $3)", c.Param("gatewayId"), req.Name, req.Config)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSGAP003"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSGAP003"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSGAP003",
-			Error: "Plugin can't be added",
+			Code:    "CSGAP003",
+			Message: "Plugin can't be added",
 		})
 	}
 
@@ -395,11 +370,10 @@ func GetPlugin(c echo.Context) error {
 	 `, c.Param("gatewayId"), c.Param("pluginName")).StructScan(&plugin)
 
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSSGGP001"})
-		contextLogger.Errorf("QueryRowx: Select plugin")
+		logger.WithFields(logger.Fields{"code": "CSSGGP001"}).Errorf("QueryRowx: Select plugin")
 		return c.JSON(http.StatusNotFound, ErrorResponse{
-			Code:  "CSSGGP001",
-			Error: "Plugin not found",
+			Code:    "CSSGGP001",
+			Message: "Plugin not found",
 		})
 	}
 

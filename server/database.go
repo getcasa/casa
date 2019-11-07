@@ -147,14 +147,12 @@ func InitDB() {
 	connStr := "postgres://postgres:password@localhost/?sslmode=disable"
 	db, err := sqlx.Open("postgres", connStr)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDIDB001"})
-		contextLogger.Panicf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSDIDB001"}).Panicf("%s", err.Error())
 	}
 
 	_, err = db.Exec("CREATE database casadb")
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDIDB002"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSDIDB002"}).Errorf("%s", err.Error())
 	}
 
 	db.Close()
@@ -162,39 +160,33 @@ func InitDB() {
 	connStr = "postgres://postgres:password@localhost/casadb?sslmode=disable"
 	db, err = sqlx.Open("postgres", connStr)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDIDB003"})
-		contextLogger.Panicf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSDIDB003"}).Panicf("%s", err.Error())
 	}
 
 	file, err := ioutil.ReadFile("database.sql")
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDIDB004"})
-		contextLogger.Panicf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSDIDB004"}).Panicf("%s", err.Error())
 	}
 
 	_, err = db.Exec(string(file))
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDIDB005"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSDIDB005"}).Errorf("%s", err.Error())
 	}
 
 	resp, err := http.Get("https://raw.githubusercontent.com/geckoboard/pgulid/master/pgulid.sql")
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDIDB006"})
-		contextLogger.Panicf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSDIDB006"}).Panicf("%s", err.Error())
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDIDB007"})
-		contextLogger.Panicf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSDIDB007"}).Panicf("%s", err.Error())
 	}
 
 	_, err = db.Exec(string(body))
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDIDB008"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSDIDB008"}).Errorf("%s", err.Error())
 	}
 
 	db.Close()
@@ -206,7 +198,6 @@ func StartDB() {
 	connStr := "postgres://postgres:password@localhost/casadb?sslmode=disable"
 	DB, err = sqlx.Open("postgres", connStr)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSDSDB001"})
-		contextLogger.Panicf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSDSDB001"}).Panicf("%s", err.Error())
 	}
 }

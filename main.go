@@ -24,8 +24,7 @@ func main() {
 		log.Fatalf("Could not instantiate log %s", err.Error())
 	}
 
-	contextLogger := logger.WithFields(logger.Fields{})
-	contextLogger.Debugf("Start casa")
+	logger.WithFields(logger.Fields{}).Debugf("Start casa")
 
 	cmd.Execute()
 }

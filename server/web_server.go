@@ -14,8 +14,8 @@ type MessageResponse struct {
 
 // ErrorResponse define json reponse error for API
 type ErrorResponse struct {
-	Error string `json:"error"`
-	Code  string `json:"code"`
+	Code    string `json:"code"`
+	Message string `json:"message"`
 }
 
 // DataReponse define json response for API

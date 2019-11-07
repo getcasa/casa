@@ -17,20 +17,18 @@ type addRoomReq struct {
 func AddRoom(c echo.Context) error {
 	req := new(addRoomReq)
 	if err := c.Bind(req); err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSRAR001"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSRAR001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSRAR001",
-			Error: "Wrong parameters",
+			Code:    "CSRAR001",
+			Message: "Wrong parameters",
 		})
 	}
 
 	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Name"}); err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSRAR002"})
-		contextLogger.Warnf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSRAR002"}).Warnf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSRAR002",
-			Error: err.Error(),
+			Code:    "CSRAR002",
+			Message: err.Error(),
 		})
 	}
 
@@ -38,22 +36,20 @@ func AddRoom(c echo.Context) error {
 
 	row, err := DB.Query("INSERT INTO rooms (id, name, home_id, creator_id) VALUES (generate_ulid(), $1, $2, $3) RETURNING id;", req.Name, c.Param("homeId"), user.ID)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSRAR003"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSRAR003"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSRAR003",
-			Error: "Room can't be created",
+			Code:    "CSRAR003",
+			Message: "Room can't be created",
 		})
 	}
 	var roomID string
 	row.Next()
 	err = row.Scan(&roomID)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSRAR004"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSRAR004"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSRAR004",
-			Error: "Room can't be created",
+			Code:    "CSRAR004",
+			Message: "Room can't be created",
 		})
 	}
 
@@ -68,11 +64,10 @@ func AddRoom(c echo.Context) error {
 	}
 	_, err = DB.NamedExec("INSERT INTO permissions (id, user_id, type, type_id, read, write, manage, admin) VALUES (generate_ulid(), :user_id, :type, :type_id, :read, :write, :manage, :admin)", newPermission)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSRAR005"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSRAR005"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSRAR005",
-			Error: "Room can't be created",
+			Code:    "CSRAR005",
+			Message: "Room can't be created",
 		})
 	}
 
@@ -85,17 +80,15 @@ func AddRoom(c echo.Context) error {
 func UpdateRoom(c echo.Context) error {
 	req := new(addRoomReq)
 	if err := c.Bind(req); err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSRUR001"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSRUR001"}).Errorf("%s", err.Error())
 		return err
 	}
 
 	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Name"}); err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSRUR002"})
-		contextLogger.Warnf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSRUR002"}).Warnf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:  "CSRUR002",
-			Error: err.Error(),
+			Code:    "CSRUR002",
+			Message: err.Error(),
 		})
 	}
 
@@ -104,30 +97,27 @@ func UpdateRoom(c echo.Context) error {
 	var permission Permission
 	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "room", c.Param("roomId"))
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSRUR003"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSRUR003"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusNotFound, ErrorResponse{
-			Code:  "CSRUR003",
-			Error: "Room not found",
+			Code:    "CSRUR003",
+			Message: "Room not found",
 		})
 	}
 
 	if permission.Manage == 0 && permission.Admin == 0 {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSRUR004"})
-		contextLogger.Warnf("Unauthorized")
+		logger.WithFields(logger.Fields{"code": "CSRUR004"}).Warnf("Unauthorized")
 		return c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Code:  "CSRUR004",
-			Error: "Unauthorized modifications",
+			Code:    "CSRUR004",
+			Message: "Unauthorized modifications",
 		})
 	}
 
 	_, err = DB.Exec("UPDATE rooms SET Name=$1 WHERE id=$2", req.Name, c.Param("roomId"))
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSRUR005"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSRUR005"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSRUR005",
-			Error: "Room can't be updated",
+			Code:    "CSRUR005",
+			Message: "Room can't be updated",
 		})
 	}
 
@@ -143,39 +133,35 @@ func DeleteRoom(c echo.Context) error {
 	var permission Permission
 	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "room", c.Param("roomId"))
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSRDR001"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSRDR001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusNotFound, ErrorResponse{
-			Code:  "CSRDR001",
-			Error: "Room not found",
+			Code:    "CSRDR001",
+			Message: "Room not found",
 		})
 	}
 
 	if permission.Admin == 0 {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSRDR002"})
-		contextLogger.Warnf("Unauthorized")
+		logger.WithFields(logger.Fields{"code": "CSRDR002"}).Warnf("Unauthorized")
 		return c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Code:  "CSRDR002",
-			Error: "Unauthorized modifications",
+			Code:    "CSRDR002",
+			Message: "Unauthorized modifications",
 		})
 	}
 
 	_, err = DB.Exec("DELETE FROM rooms WHERE id=$1", c.Param("roomId"))
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSRDR003"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSRDR003"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSRDR003",
-			Error: "Room can't be deleted",
+			Code:    "CSRDR003",
+			Message: "Room can't be deleted",
 		})
 	}
 	_, err = DB.Exec("DELETE FROM permissions WHERE type=$1 AND type_id=$2", "room", c.Param("roomId"))
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSRDR004"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSRDR004"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSRDR004",
-			Error: "Room can't be deleted",
+			Code:    "CSRDR004",
+			Message: "Room can't be deleted",
 		})
 	}
 
@@ -217,11 +203,10 @@ func GetRooms(c echo.Context) error {
 		WHERE type=$1 AND user_id=$2 AND rooms.home_id=$3 AND (permissions.read=1 OR permissions.admin=1)
 	`, "room", user.ID, c.Param("homeId"))
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSRGRS001"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSRGRS001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSRGRS001",
-			Error: "Rooms can't be retrieved",
+			Code:    "CSRGRS001",
+			Message: "Rooms can't be retrieved",
 		})
 	}
 
@@ -230,11 +215,10 @@ func GetRooms(c echo.Context) error {
 		var permission permissionRoom
 		err := rows.StructScan(&permission)
 		if err != nil {
-			contextLogger := logger.WithFields(logger.Fields{"code": "CSRGRS002"})
-			contextLogger.Errorf("%s", err.Error())
+			logger.WithFields(logger.Fields{"code": "CSRGRS002"}).Errorf("%s", err.Error())
 			return c.JSON(http.StatusInternalServerError, ErrorResponse{
-				Code:  "CSRGRS002",
-				Error: "Rooms can't be retrieved",
+				Code:    "CSRGRS002",
+				Message: "Rooms can't be retrieved",
 			})
 		}
 		rooms = append(rooms, roomRes{
@@ -268,22 +252,20 @@ func GetRoom(c echo.Context) error {
 	`, "room", c.Param("roomId"), user.ID)
 
 	if row == nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSRGR001"})
-		contextLogger.Errorf("QueryRowx: Select error")
+		logger.WithFields(logger.Fields{"code": "CSRGR001"}).Errorf("QueryRowx: Select error")
 		return c.JSON(http.StatusNotFound, ErrorResponse{
-			Code:  "CSRGR001",
-			Error: "Room can't be found",
+			Code:    "CSRGR001",
+			Message: "Room can't be found",
 		})
 	}
 
 	var permission permissionRoom
 	err := row.StructScan(&permission)
 	if err != nil {
-		contextLogger := logger.WithFields(logger.Fields{"code": "CSRGR002"})
-		contextLogger.Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSRGR002"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:  "CSRGR002",
-			Error: "Room can't be found",
+			Code:    "CSRGR002",
+			Message: "Room can't be found",
 		})
 	}
 
