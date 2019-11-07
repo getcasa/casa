@@ -22,10 +22,11 @@ type WebsocketMessage struct {
 }
 
 type ActionMessage struct {
-	Plugin string
-	Call   string
-	Config string
-	Params string
+	PhysicalID string
+	Plugin     string
+	Call       string
+	Config     string
+	Params     string
 }
 
 var wsconn *websocket.Conn
@@ -236,10 +237,11 @@ func Automations() {
 							if err == nil {
 
 								act := ActionMessage{
-									Plugin: device.Plugin,
-									Call:   auto.ActionCall[i],
-									Config: device.Config,
-									Params: auto.ActionValue[i],
+									PhysicalID: device.PhysicalID,
+									Plugin:     device.Plugin,
+									Call:       auto.ActionCall[i],
+									Config:     device.Config,
+									Params:     auto.ActionValue[i],
 								}
 
 								marshAct, _ := json.Marshal(act)
