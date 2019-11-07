@@ -257,3 +257,69 @@ func EditMember(c echo.Context) error {
 		Message: "Member has been updated",
 	})
 }
+
+// GetRoomMembers route get list of home members
+func GetRoomMembers(c echo.Context) error {
+	rows, err := DB.Queryx(`
+		SELECT * FROM permissions
+		JOIN users ON permissions.user_id = users.id
+		WHERE (permissions.type=$1 AND permissions.type_id=$2) OR (permissions.type=$3 AND permissions.type_id=$4)
+	`, "home", c.Param("homeId"), "room", c.Param("roomId"))
+	if err != nil {
+		logger.WithFields(logger.Fields{"code": "CSMGM001"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:    "CSMGM001",
+			Message: "Members can't be retrieved",
+		})
+	}
+
+	var permissions []permissionMember
+	for rows.Next() {
+		var permission permissionMember
+		err := rows.StructScan(&permission)
+		if err != nil {
+			logger.WithFields(logger.Fields{"code": "CSMGM002"}).Errorf("%s", err.Error())
+			return c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Code:    "CSMGM002",
+				Message: "Members can't be retrieved",
+			})
+		}
+
+		permissions = append(permissions, permission)
+	}
+
+	var members []memberRes
+	for _, permission := range permissions {
+		if permission.Permission.Type == "room" {
+			continue
+		}
+
+		member := memberRes{
+			ID:        permission.User.ID,
+			Firstname: permission.User.Firstname,
+			Lastname:  permission.User.Lastname,
+			Email:     permission.User.Email,
+			Birthdate: permission.User.Birthdate,
+			CreatedAt: permission.User.CreatedAt,
+			Read:      0,
+			Write:     0,
+			Manage:    0,
+			Admin:     0,
+		}
+
+		for _, _permission := range permissions {
+			if _permission.Permission.Type == "room" && permission.Permission.UserID == _permission.Permission.UserID {
+				member.Read = _permission.Permission.Read
+				member.Write = _permission.Permission.Write
+				member.Manage = _permission.Permission.Manage
+				member.Admin = _permission.Permission.Admin
+				break
+			}
+		}
+		members = append(members, member)
+	}
+
+	totalMembers := strconv.Itoa(len(members))
+	c.Response().Header().Set("Content-Range", "0-"+totalMembers+"/"+totalMembers)
+	return c.JSON(http.StatusOK, members)
+}
