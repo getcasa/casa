@@ -23,10 +23,10 @@ type memberRes struct {
 	Email     string `json:"email"`
 	Birthdate string `json:"birthdate"`
 	CreatedAt string `json:"createdAt"`
-	Read      int    `json:"read"`
-	Write     int    `json:"write"`
-	Manage    int    `json:"manage"`
-	Admin     int    `json:"admin"`
+	Read      bool   `json:"read"`
+	Write     bool   `json:"write"`
+	Manage    bool   `json:"manage"`
+	Admin     bool   `json:"admin"`
 }
 
 // GetMembers route get list of home members
@@ -182,10 +182,10 @@ func RemoveMember(c echo.Context) error {
 }
 
 type editMemberReq struct {
-	Read   string
-	Write  string
-	Manage string
-	Admin  string
+	Read   bool
+	Write  bool
+	Manage bool
+	Admin  bool
 }
 
 // EditMember route create a new permission to authorize an user
@@ -207,44 +207,11 @@ func EditMember(c echo.Context) error {
 		})
 	}
 
-	read, err := strconv.Atoi(req.Read)
-	if err != nil {
-		logger.WithFields(logger.Fields{"code": "CSMEM003"}).Errorf("%s", err.Error())
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:    "CSMEM003",
-			Message: "Read has a wrong value",
-		})
-	}
-	write, err := strconv.Atoi(req.Write)
-	if err != nil {
-		logger.WithFields(logger.Fields{"code": "CSMEM004"}).Errorf("%s", err.Error())
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:    "CSMEM004",
-			Message: "Write has a wrong value",
-		})
-	}
-	manage, err := strconv.Atoi(req.Manage)
-	if err != nil {
-		logger.WithFields(logger.Fields{"code": "CSMEM005"}).Errorf("%s", err.Error())
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:    "CSMEM005",
-			Message: "Manage has a wrong value",
-		})
-	}
-	admin, err := strconv.Atoi(req.Admin)
-	if err != nil {
-		logger.WithFields(logger.Fields{"code": "CSMEM006"}).Errorf("%s", err.Error())
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:    "CSMEM006",
-			Message: "Admin has a wrong value",
-		})
-	}
-
-	_, err = DB.Exec(`
+	_, err := DB.Exec(`
 		UPDATE permissions
 		SET read=$1, write=$2, manage=$3, admin=$4
 		WHERE user_id=$5 AND type=$6 AND type_id=$7
-	`, read, write, manage, admin, c.Param("userId"), "home", c.Param("homeId"))
+	`, req.Read, req.Write, req.Manage, req.Admin, c.Param("userId"), "home", c.Param("homeId"))
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSMEM007"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
@@ -301,10 +268,10 @@ func GetRoomMembers(c echo.Context) error {
 			Email:     permission.User.Email,
 			Birthdate: permission.User.Birthdate,
 			CreatedAt: permission.User.CreatedAt,
-			Read:      0,
-			Write:     0,
-			Manage:    0,
-			Admin:     0,
+			Read:      false,
+			Write:     false,
+			Manage:    false,
+			Admin:     false,
 		}
 
 		for _, _permission := range permissions {
@@ -343,41 +310,8 @@ func EditRoomMember(c echo.Context) error {
 		})
 	}
 
-	read, err := strconv.Atoi(req.Read)
-	if err != nil {
-		logger.WithFields(logger.Fields{"code": "CSSMERM003"}).Errorf("%s", err.Error())
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:    "CSSMERM003",
-			Message: "Read has a wrong value",
-		})
-	}
-	write, err := strconv.Atoi(req.Write)
-	if err != nil {
-		logger.WithFields(logger.Fields{"code": "CSSMERM004"}).Errorf("%s", err.Error())
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:    "CSSMERM004",
-			Message: "Write has a wrong value",
-		})
-	}
-	manage, err := strconv.Atoi(req.Manage)
-	if err != nil {
-		logger.WithFields(logger.Fields{"code": "CSSMERM005"}).Errorf("%s", err.Error())
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:    "CSSMERM005",
-			Message: "Manage has a wrong value",
-		})
-	}
-	admin, err := strconv.Atoi(req.Admin)
-	if err != nil {
-		logger.WithFields(logger.Fields{"code": "CSSMERM006"}).Errorf("%s", err.Error())
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:    "CSSMERM006",
-			Message: "Admin has a wrong value",
-		})
-	}
-
 	var permission Permission
-	err = DB.QueryRowx(`
+	err := DB.QueryRowx(`
 		SELECT * FROM permissions
 		WHERE user_id=$1 AND type=$2 AND type_id=$3
 	 `, c.Param("userId"), "room", c.Param("roomId")).StructScan(&permission)
@@ -386,7 +320,7 @@ func EditRoomMember(c echo.Context) error {
 		_, err = DB.Exec(`
 			INSERT INTO permissions (id, user_id, type, type_id, read, write, manage, admin) 
 			VALUES (generate_ulid(), $1, $2, $3, $4, $5, $6, $7)
-		`, c.Param("userId"), "room", c.Param("roomId"), read, write, manage, admin)
+		`, c.Param("userId"), "room", c.Param("roomId"), req.Read, req.Write, req.Manage, req.Admin)
 		if err != nil {
 			logger.WithFields(logger.Fields{"code": "CSSMERM007"}).Errorf("%s", err.Error())
 			return c.JSON(http.StatusInternalServerError, ErrorResponse{
@@ -404,7 +338,7 @@ func EditRoomMember(c echo.Context) error {
 		UPDATE permissions
 		SET read=$1, write=$2, manage=$3, admin=$4
 		WHERE user_id=$5 AND type=$6 AND type_id=$7
-	`, read, write, manage, admin, c.Param("userId"), "room", c.Param("roomId"))
+	`, req.Read, req.Write, req.Manage, req.Admin, c.Param("userId"), "room", c.Param("roomId"))
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSSMERM008"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
