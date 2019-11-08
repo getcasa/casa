@@ -257,3 +257,163 @@ func EditMember(c echo.Context) error {
 		Message: "Member has been updated",
 	})
 }
+
+// GetRoomMembers route get list of home members
+func GetRoomMembers(c echo.Context) error {
+	rows, err := DB.Queryx(`
+		SELECT * FROM permissions
+		JOIN users ON permissions.user_id = users.id
+		WHERE (permissions.type=$1 AND permissions.type_id=$2) OR (permissions.type=$3 AND permissions.type_id=$4)
+	`, "home", c.Param("homeId"), "room", c.Param("roomId"))
+	if err != nil {
+		logger.WithFields(logger.Fields{"code": "CSSMGRM001"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:    "CSSMGRM001",
+			Message: "Members can't be retrieved",
+		})
+	}
+
+	var permissions []permissionMember
+	for rows.Next() {
+		var permission permissionMember
+		err := rows.StructScan(&permission)
+		if err != nil {
+			logger.WithFields(logger.Fields{"code": "CSSMGRM002"}).Errorf("%s", err.Error())
+			return c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Code:    "CSSMGRM002",
+				Message: "Members can't be retrieved",
+			})
+		}
+
+		permissions = append(permissions, permission)
+	}
+
+	var members []memberRes
+	for _, permission := range permissions {
+		if permission.Permission.Type == "room" {
+			continue
+		}
+
+		member := memberRes{
+			ID:        permission.User.ID,
+			Firstname: permission.User.Firstname,
+			Lastname:  permission.User.Lastname,
+			Email:     permission.User.Email,
+			Birthdate: permission.User.Birthdate,
+			CreatedAt: permission.User.CreatedAt,
+			Read:      0,
+			Write:     0,
+			Manage:    0,
+			Admin:     0,
+		}
+
+		for _, _permission := range permissions {
+			if _permission.Permission.Type == "room" && permission.Permission.UserID == _permission.Permission.UserID {
+				member.Read = _permission.Permission.Read
+				member.Write = _permission.Permission.Write
+				member.Manage = _permission.Permission.Manage
+				member.Admin = _permission.Permission.Admin
+				break
+			}
+		}
+		members = append(members, member)
+	}
+
+	totalMembers := strconv.Itoa(len(members))
+	c.Response().Header().Set("Content-Range", "0-"+totalMembers+"/"+totalMembers)
+	return c.JSON(http.StatusOK, members)
+}
+
+// EditRoomMember route create a new permission to authorize an user in a room
+func EditRoomMember(c echo.Context) error {
+	req := new(editMemberReq)
+	if err := c.Bind(req); err != nil {
+		logger.WithFields(logger.Fields{"code": "CSSMERM001"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:    "CSSMERM001",
+			Message: "Wrong parameters",
+		})
+	}
+
+	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Read", "Write", "Manage", "Admin"}); err != nil {
+		logger.WithFields(logger.Fields{"code": "CSSMERM002"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:    "CSSMERM002",
+			Message: err.Error(),
+		})
+	}
+
+	read, err := strconv.Atoi(req.Read)
+	if err != nil {
+		logger.WithFields(logger.Fields{"code": "CSSMERM003"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:    "CSSMERM003",
+			Message: "Read has a wrong value",
+		})
+	}
+	write, err := strconv.Atoi(req.Write)
+	if err != nil {
+		logger.WithFields(logger.Fields{"code": "CSSMERM004"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:    "CSSMERM004",
+			Message: "Write has a wrong value",
+		})
+	}
+	manage, err := strconv.Atoi(req.Manage)
+	if err != nil {
+		logger.WithFields(logger.Fields{"code": "CSSMERM005"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:    "CSSMERM005",
+			Message: "Manage has a wrong value",
+		})
+	}
+	admin, err := strconv.Atoi(req.Admin)
+	if err != nil {
+		logger.WithFields(logger.Fields{"code": "CSSMERM006"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:    "CSSMERM006",
+			Message: "Admin has a wrong value",
+		})
+	}
+
+	var permission Permission
+	err = DB.QueryRowx(`
+		SELECT * FROM permissions
+		WHERE user_id=$1 AND type=$2 AND type_id=$3
+	 `, c.Param("userId"), "room", c.Param("roomId")).StructScan(&permission)
+
+	if err != nil {
+		_, err = DB.Exec(`
+			INSERT INTO permissions (id, user_id, type, type_id, read, write, manage, admin) 
+			VALUES (generate_ulid(), $1, $2, $3, $4, $5, $6, $7)
+		`, c.Param("userId"), "room", c.Param("roomId"), read, write, manage, admin)
+		if err != nil {
+			logger.WithFields(logger.Fields{"code": "CSSMERM007"}).Errorf("%s", err.Error())
+			return c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Code:    "CSSMERM007",
+				Message: "Member can't be updated",
+			})
+		}
+
+		return c.JSON(http.StatusOK, MessageResponse{
+			Message: "Member has been updated",
+		})
+	}
+
+	_, err = DB.Exec(`
+		UPDATE permissions
+		SET read=$1, write=$2, manage=$3, admin=$4
+		WHERE user_id=$5 AND type=$6 AND type_id=$7
+	`, read, write, manage, admin, c.Param("userId"), "room", c.Param("roomId"))
+	if err != nil {
+		logger.WithFields(logger.Fields{"code": "CSSMERM008"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:    "CSSMERM008",
+			Message: "Member can't be updated",
+		})
+	}
+
+	return c.JSON(http.StatusOK, MessageResponse{
+		Message: "Member has been updated",
+	})
+}
