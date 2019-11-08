@@ -14,11 +14,13 @@ import (
 	"github.com/lib/pq"
 )
 
+// WebsocketMessage struct to format received message
 type WebsocketMessage struct {
 	Action string // newData
 	Body   []byte
 }
 
+// ActionMessage struct to format sended message
 type ActionMessage struct {
 	PhysicalID string
 	Plugin     string
@@ -30,6 +32,7 @@ type ActionMessage struct {
 var wsconn *websocket.Conn
 var queues []Datas
 var configs []sdk.Configuration
+var discovered []sdk.Device
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
@@ -86,15 +89,17 @@ func InitConnection(con echo.Context) error {
 		_, message, err := wsconn.ReadMessage()
 		if err != nil {
 			logger.WithFields(logger.Fields{"code": "CSDIC002"}).Errorf("%s", err.Error())
-			break
+			continue
 		}
 		err = json.Unmarshal(message, &wm)
 		if err != nil {
 			logger.WithFields(logger.Fields{"code": "CSDIC003"}).Errorf("%s", err.Error())
-			break
+			continue
 		}
 
 		switch wm.Action {
+		case "discoverevices":
+			json.Unmarshal(wm.Body, &discovered)
 		case "newConnection":
 			GetConfigFromGateway(string(wm.Body))
 		case "newData":
@@ -102,12 +107,47 @@ func InitConnection(con echo.Context) error {
 			json.Unmarshal(wm.Body, &datas)
 			SaveNewDatas(datas)
 		default:
-			break
+			continue
 		}
 
 		logger.WithFields(logger.Fields{}).Debugf("recv: %s", message)
 	}
-	return nil
+}
+
+// GetDiscoveredDevices return an array of futur discover
+func GetDiscoveredDevices(c echo.Context) error {
+	c.Param("gatewayId")
+
+	message := WebsocketMessage{
+		Action: "discoverDevices",
+		Body:   []byte(""),
+	}
+
+	marshMessage, _ := json.Marshal(message)
+	err := wsconn.WriteMessage(websocket.TextMessage, marshMessage)
+	if err != nil {
+		logger.WithFields(logger.Fields{"code": "CSSGDD001"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:    "CSSGDD001",
+			Message: err.Error(),
+		})
+	}
+
+	for len(discovered) == 0 {
+	}
+
+	marshDiscovered, err := json.Marshal(discovered)
+	if err != nil {
+		logger.WithFields(logger.Fields{"code": "CSSGDD002"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:    "CSSGDD002",
+			Message: err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, MessageResponse{
+		Message: string(marshDiscovered),
+	})
 }
 
 // SaveNewDatas save receive datas from gateway in DB
@@ -121,7 +161,7 @@ func SaveNewDatas(queue Datas) {
 	}
 	queue.DeviceID = device.ID
 
-	if FindFieldFromName(FindTriggerFromName(configFromPlugin(configs, device.Plugin).Triggers, device.PhysicalName).Fields, queue.Field).Direct {
+	if FindFieldFromName(sdk.FindTriggerFromName(configFromPlugin(configs, device.Plugin).Triggers, device.PhysicalName).Fields, queue.Field).Direct {
 		queues = append(queues, queue)
 	}
 
@@ -149,7 +189,7 @@ func Automations() {
 					for i := 0; i < len(auto.Trigger); i++ {
 						var device Device
 						err = DB.Get(&device, `SELECT * FROM devices WHERE id = $1`, auto.Trigger[i])
-						field := FindFieldFromName(FindTriggerFromName(configFromPlugin(configs, device.Plugin).Triggers, device.PhysicalName).Fields, auto.TriggerKey[i])
+						field := FindFieldFromName(sdk.FindTriggerFromName(configFromPlugin(configs, device.Plugin).Triggers, device.PhysicalName).Fields, auto.TriggerKey[i])
 
 						if field.Direct {
 							queue := FindDataFromID(queues, device.ID)
@@ -301,16 +341,6 @@ func FindDataFromID(datas []Datas, ID string) Datas {
 		}
 	}
 	return Datas{}
-}
-
-// FindTriggerFromName find trigger with name trigger
-func FindTriggerFromName(triggers []sdk.Trigger, name string) sdk.Trigger {
-	for _, trigger := range triggers {
-		if trigger.Name == name {
-			return trigger
-		}
-	}
-	return sdk.Trigger{}
 }
 
 // FindFieldFromName find field with name field

@@ -66,10 +66,11 @@ func Start(port string) {
 	v1.POST("/signout", SignOut)
 
 	// Gateway
-	v1.POST("/gateway/link", LinkGateway)
-	v1.PUT("/gateway/:id", UpdateGateway)
-	v1.DELETE("/gateway/:id", DeleteGateway)
-	v1.GET("/gateway/:id", GetGateway)
+	v1.POST("/gateways/link", LinkGateway)
+	v1.PUT("/gateways/:id", UpdateGateway)
+	v1.DELETE("/gateways/:id", DeleteGateway)
+	v1.GET("/gateways/:id", GetGateway)
+	v1.GET("/gateways/:gatewayId/discover", GetDiscoveredDevices)
 
 	// Homes
 	v1.POST("/homes", AddHome)
