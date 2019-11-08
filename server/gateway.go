@@ -116,7 +116,7 @@ func UpdateGateway(c echo.Context) error {
 		})
 	}
 
-	if permission.Manage == 0 && permission.Admin == 0 {
+	if permission.Manage == false && permission.Admin == false {
 		logger.WithFields(logger.Fields{"code": "CSGUG005"}).Warnf("Unauthorized")
 		return c.JSON(http.StatusUnauthorized, ErrorResponse{
 			Code:    "CSGUG005",
@@ -163,7 +163,7 @@ func DeleteGateway(c echo.Context) error {
 		})
 	}
 
-	if permission.Admin == 0 {
+	if permission.Admin == false {
 		logger.WithFields(logger.Fields{"code": "CSGDG003"}).Warnf("Unauthorized")
 		return c.JSON(http.StatusUnauthorized, ErrorResponse{
 			Code:    "CSGDG003",
@@ -247,10 +247,10 @@ type gatewayRes struct {
 	CreatedAt string         `json:"created_at"`
 	UpdatedAt string         `json:"updated_at"`
 	Creator   User           `json:"creator"`
-	Read      int            `json:"read"`
-	Write     int            `json:"write"`
-	Manage    int            `json:"manage"`
-	Admin     int            `json:"admin"`
+	Read      bool           `json:"read"`
+	Write     bool           `json:"write"`
+	Manage    bool           `json:"manage"`
+	Admin     bool           `json:"admin"`
 }
 
 // GetGateway route get specific gateway with id
