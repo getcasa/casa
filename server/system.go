@@ -29,13 +29,8 @@ type ActionMessage struct {
 	Params     string
 }
 
-<<<<<<< HEAD
 var gatewayAddr string
-var wsconn *websocket.Conn
-=======
-// WSConn define the connection between casa server and gateway
 var WSConn *websocket.Conn
->>>>>>> add route POST /gateways/:gatewayId/actions to call an action on gateway
 var queues []Datas
 var configs []sdk.Configuration
 var discovered []sdk.Device
@@ -125,17 +120,7 @@ func GetDiscoveredDevices(c echo.Context) error {
 	logger.WithFields(logger.Fields{}).Debugf("Discover devices")
 	plugin := c.Param("plugin")
 
-<<<<<<< HEAD
 	resp, err := http.Get("http://" + gatewayAddr + "/v1/discover/" + plugin)
-=======
-	message := WebsocketMessage{
-		Action: "discoverDevices",
-		Body:   []byte(""),
-	}
-
-	marshMessage, _ := json.Marshal(message)
-	err := WSConn.WriteMessage(websocket.TextMessage, marshMessage)
->>>>>>> add route POST /gateways/:gatewayId/actions to call an action on gateway
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSSGDDG001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
