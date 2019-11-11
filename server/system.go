@@ -30,6 +30,8 @@ type ActionMessage struct {
 }
 
 var gatewayAddr string
+
+// WSConn define the websocket connected between casa server and gateway
 var WSConn *websocket.Conn
 var queues []Datas
 var configs []sdk.Configuration
