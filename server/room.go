@@ -1,12 +1,15 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 	"reflect"
+	"strconv"
 
 	"github.com/ItsJimi/casa/logger"
 	"github.com/ItsJimi/casa/utils"
 	"github.com/labstack/echo"
+	"github.com/lib/pq"
 )
 
 type addRoomReq struct {
@@ -57,10 +60,10 @@ func AddRoom(c echo.Context) error {
 		UserID: user.ID,
 		Type:   "room",
 		TypeID: roomID,
-		Read:   1,
-		Write:  1,
-		Manage: 1,
-		Admin:  1,
+		Read:   true,
+		Write:  true,
+		Manage: true,
+		Admin:  true,
 	}
 	_, err = DB.NamedExec("INSERT INTO permissions (id, user_id, type, type_id, read, write, manage, admin) VALUES (generate_ulid(), :user_id, :type, :type_id, :read, :write, :manage, :admin)", newPermission)
 	if err != nil {
@@ -104,7 +107,7 @@ func UpdateRoom(c echo.Context) error {
 		})
 	}
 
-	if permission.Manage == 0 && permission.Admin == 0 {
+	if permission.Manage == false && permission.Admin == false {
 		logger.WithFields(logger.Fields{"code": "CSRUR004"}).Warnf("Unauthorized")
 		return c.JSON(http.StatusUnauthorized, ErrorResponse{
 			Code:    "CSRUR004",
@@ -140,7 +143,7 @@ func DeleteRoom(c echo.Context) error {
 		})
 	}
 
-	if permission.Admin == 0 {
+	if permission.Admin == false {
 		logger.WithFields(logger.Fields{"code": "CSRDR002"}).Warnf("Unauthorized")
 		return c.JSON(http.StatusUnauthorized, ErrorResponse{
 			Code:    "CSRDR002",
@@ -171,24 +174,36 @@ func DeleteRoom(c echo.Context) error {
 }
 
 type permissionRoom struct {
-	Permission
-	User
-	RoomID        string `db:"r_id"`
-	RoomName      string `db:"r_name"`
-	RoomHomeID    string `db:"r_homeid"`
-	RoomCreatedAt string `db:"r_createdat"`
+	PermissionTypeID string `db:"p_type_id"`
+	PermissionRead   bool   `db:"p_read"`
+	PermissionWrite  bool   `db:"p_write"`
+	PermissionManage bool   `db:"p_manage"`
+	PermissionAdmin  bool   `db:"p_admin"`
+	UserID           string `db:"u_id"`
+	UserFirstname    string `db:"u_firstname"`
+	Devices          []string
+	RoomID           string `db:"r_id"`
+	RoomName         string `db:"r_name"`
+	RoomHomeID       string `db:"r_home_id"`
+	RoomCreatedAt    string `db:"r_created_at"`
+}
+
+type minimalUser struct {
+	ID        string `json:"id"`
+	Firstname string `json:"firstname"`
 }
 
 type roomRes struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	HomeID    string `json:"home_id"`
-	CreatedAt string `json:"created_at"`
-	Creator   User   `json:"creator"`
-	Read      int    `json:"read"`
-	Write     int    `json:"write"`
-	Manage    int    `json:"manage"`
-	Admin     int    `json:"admin"`
+	ID        string      `json:"id"`
+	Name      string      `json:"name"`
+	HomeID    string      `json:"homeId"`
+	CreatedAt string      `json:"createdAt"`
+	Creator   minimalUser `json:"creator"`
+	Read      bool        `json:"read"`
+	Write     bool        `json:"write"`
+	Manage    bool        `json:"manage"`
+	Admin     bool        `json:"admin"`
+	Devices   []Device    `json:"devices"`
 }
 
 // GetRooms route get list of user rooms
@@ -196,11 +211,24 @@ func GetRooms(c echo.Context) error {
 	user := c.Get("user").(User)
 
 	rows, err := DB.Queryx(`
-		SELECT permissions.*, users.*,
-		rooms.id as r_id,	rooms.name AS r_name, rooms.home_id AS r_homeid, rooms.created_at AS r_createdat FROM permissions
-		JOIN rooms ON permissions.type_id = rooms.id
-		JOIN users ON rooms.creator_id = users.id
-		WHERE type=$1 AND user_id=$2 AND rooms.home_id=$3 AND (permissions.read=1 OR permissions.admin=1)
+		SELECT t.*, array(SELECT to_json(devices.*) FROM devices JOIN rooms ON rooms.id = devices.room_id WHERE rooms.id = r_id ) AS devices 
+		FROM (
+			SELECT permissions.type_id as p_type_id,
+			permissions.read as p_read,
+			permissions.write as p_write,
+			permissions.manage as p_manage,
+			permissions.admin as p_admin,
+			users.id as u_id,
+			users.firstname as u_firstname,
+			rooms.id as r_id,
+			rooms.name AS r_name,
+			rooms.home_id AS r_home_id,
+			rooms.created_at AS r_created_at
+			FROM permissions
+			JOIN rooms ON permissions.type_id = rooms.id
+			JOIN users ON rooms.creator_id = users.id
+			WHERE type=$1 AND user_id=$2 AND rooms.home_id=$3 AND (permissions.read=true OR permissions.admin=true)
+		) AS t
 	`, "room", user.ID, c.Param("homeId"))
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSRGRS001"}).Errorf("%s", err.Error())
@@ -210,10 +238,10 @@ func GetRooms(c echo.Context) error {
 		})
 	}
 
-	var rooms []roomRes
+	rooms := []roomRes{}
 	for rows.Next() {
 		var permission permissionRoom
-		err := rows.StructScan(&permission)
+		err := rows.Scan(&permission.PermissionTypeID, &permission.PermissionRead, &permission.PermissionWrite, &permission.PermissionManage, &permission.PermissionAdmin, &permission.UserID, &permission.UserFirstname, &permission.RoomID, &permission.RoomName, &permission.RoomHomeID, &permission.RoomCreatedAt, pq.Array(&permission.Devices))
 		if err != nil {
 			logger.WithFields(logger.Fields{"code": "CSRGRS002"}).Errorf("%s", err.Error())
 			return c.JSON(http.StatusInternalServerError, ErrorResponse{
@@ -221,37 +249,72 @@ func GetRooms(c echo.Context) error {
 				Message: "Rooms can't be retrieved",
 			})
 		}
+
+		devices := []Device{}
+		for _, device := range permission.Devices {
+			var _device Device
+			err = json.Unmarshal([]byte(device), &_device)
+			if err != nil {
+				logger.WithFields(logger.Fields{"code": "CSRGRS003"}).Errorf("%s", err.Error())
+				return c.JSON(http.StatusInternalServerError, ErrorResponse{
+					Code:    "CSRGRS003",
+					Message: "Rooms can't be retrieved",
+				})
+			}
+
+			devices = append(devices, _device)
+		}
+
+		minimalUser := minimalUser{
+			ID:        permission.UserID,
+			Firstname: permission.UserFirstname,
+		}
 		rooms = append(rooms, roomRes{
 			ID:        permission.RoomID,
 			Name:      permission.RoomName,
 			HomeID:    permission.RoomHomeID,
 			CreatedAt: permission.RoomCreatedAt,
-			Creator:   permission.User,
-			Read:      permission.Permission.Read,
-			Write:     permission.Permission.Write,
-			Manage:    permission.Permission.Manage,
-			Admin:     permission.Permission.Admin,
+			Creator:   minimalUser,
+			Read:      permission.PermissionRead,
+			Write:     permission.PermissionWrite,
+			Manage:    permission.PermissionManage,
+			Admin:     permission.PermissionAdmin,
+			Devices:   devices,
 		})
 	}
 
-	return c.JSON(http.StatusOK, DataReponse{
-		Data: rooms,
-	})
+	totalRooms := strconv.Itoa(len(rooms))
+	c.Response().Header().Set("Content-Range", "0-"+totalRooms+"/"+totalRooms)
+	return c.JSON(http.StatusOK, rooms)
 }
 
 // GetRoom route get specific room with id
 func GetRoom(c echo.Context) error {
 	user := c.Get("user").(User)
 
-	row := DB.QueryRowx(`
-		SELECT permissions.*, users.*,
-		rooms.id as r_id,	rooms.name AS r_name, rooms.home_id AS r_homeid, rooms.created_at AS r_createdat FROM permissions
+	var permission permissionRoom
+	err := DB.QueryRowx(`
+	SELECT t.*, array(SELECT to_json(devices.*) FROM devices JOIN rooms ON rooms.id = devices.room_id WHERE rooms.id = r_id ) AS devices 
+	FROM (
+		SELECT permissions.type_id as p_type_id,
+		permissions.read as p_read,
+		permissions.write as p_write,
+		permissions.manage as p_manage,
+		permissions.admin as p_admin,
+		users.id as u_id,
+		users.firstname as u_firstname,
+		rooms.id as r_id,
+		rooms.name AS r_name,
+		rooms.home_id AS r_home_id,
+		rooms.created_at AS r_created_at
+		FROM permissions
 		JOIN rooms ON permissions.type_id = rooms.id
 		JOIN users ON rooms.creator_id = users.id
 		WHERE type=$1 AND type_id=$2 AND user_id=$3
-	`, "room", c.Param("roomId"), user.ID)
+	) AS t
+	`, "room", c.Param("roomId"), user.ID).Scan(&permission.PermissionTypeID, &permission.PermissionRead, &permission.PermissionWrite, &permission.PermissionManage, &permission.PermissionAdmin, &permission.UserID, &permission.UserFirstname, &permission.RoomID, &permission.RoomName, &permission.RoomHomeID, &permission.RoomCreatedAt, pq.Array(&permission.Devices))
 
-	if row == nil {
+	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSRGR001"}).Errorf("QueryRowx: Select error")
 		return c.JSON(http.StatusNotFound, ErrorResponse{
 			Code:    "CSRGR001",
@@ -259,27 +322,35 @@ func GetRoom(c echo.Context) error {
 		})
 	}
 
-	var permission permissionRoom
-	err := row.StructScan(&permission)
-	if err != nil {
-		logger.WithFields(logger.Fields{"code": "CSRGR002"}).Errorf("%s", err.Error())
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:    "CSRGR002",
-			Message: "Room can't be found",
-		})
+	devices := []Device{}
+	for _, device := range permission.Devices {
+		var _device Device
+		err = json.Unmarshal([]byte(device), &_device)
+		if err != nil {
+			logger.WithFields(logger.Fields{"code": "CSRGRS003"}).Errorf("%s", err.Error())
+			return c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Code:    "CSRGRS003",
+				Message: "Room can't be retrieved",
+			})
+		}
+
+		devices = append(devices, _device)
 	}
 
-	return c.JSON(http.StatusOK, DataReponse{
-		Data: roomRes{
-			ID:        permission.RoomID,
-			Name:      permission.RoomName,
-			HomeID:    permission.RoomHomeID,
-			CreatedAt: permission.RoomCreatedAt,
-			Creator:   permission.User,
-			Read:      permission.Permission.Read,
-			Write:     permission.Permission.Write,
-			Manage:    permission.Permission.Manage,
-			Admin:     permission.Permission.Admin,
-		},
+	minimalUser := minimalUser{
+		ID:        permission.UserID,
+		Firstname: permission.UserFirstname,
+	}
+	return c.JSON(http.StatusOK, roomRes{
+		ID:        permission.RoomID,
+		Name:      permission.RoomName,
+		HomeID:    permission.RoomHomeID,
+		CreatedAt: permission.RoomCreatedAt,
+		Creator:   minimalUser,
+		Read:      permission.PermissionRead,
+		Write:     permission.PermissionWrite,
+		Manage:    permission.PermissionManage,
+		Admin:     permission.PermissionAdmin,
+		Devices:   devices,
 	})
 }

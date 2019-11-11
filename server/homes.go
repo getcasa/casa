@@ -58,10 +58,10 @@ func AddHome(c echo.Context) error {
 		UserID: user.ID,
 		Type:   "home",
 		TypeID: homeID,
-		Read:   1,
-		Write:  1,
-		Manage: 1,
-		Admin:  1,
+		Read:   true,
+		Write:  true,
+		Manage: true,
+		Admin:  true,
 	}
 	_, err = DB.NamedExec("INSERT INTO permissions (id, user_id, type, type_id, read, write, manage, admin) VALUES (generate_ulid(), :user_id, :type, :type_id, :read, :write, :manage, :admin)", newPermission)
 	if err != nil {
@@ -108,7 +108,7 @@ func UpdateHome(c echo.Context) error {
 		})
 	}
 
-	if permission.Manage == 0 && permission.Admin == 0 {
+	if permission.Manage == false && permission.Admin == false {
 		logger.WithFields(logger.Fields{"code": "CSHUH004"}).Warnf("Unauthorized")
 		return c.JSON(http.StatusUnauthorized, ErrorResponse{
 			Code:    "CSHUH004",
@@ -169,10 +169,10 @@ type homeRes struct {
 	Address   string `json:"address"`
 	CreatedAt string `json:"created_at"`
 	Creator   User   `json:"creator"`
-	Read      int    `json:"read"`
-	Write     int    `json:"write"`
-	Manage    int    `json:"manage"`
-	Admin     int    `json:"admin"`
+	Read      bool   `json:"read"`
+	Write     bool   `json:"write"`
+	Manage    bool   `json:"manage"`
+	Admin     bool   `json:"admin"`
 }
 
 // GetHomes route get list of user homes

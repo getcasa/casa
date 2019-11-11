@@ -8,7 +8,7 @@ import (
 )
 
 // hasPermission
-func hasPermission(next echo.HandlerFunc, permissionType string, read, write, manage, admin int) echo.HandlerFunc {
+func hasPermission(next echo.HandlerFunc, permissionType string, read, write, manage, admin bool) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		reqUser := c.Get("user").(User)
 
@@ -34,28 +34,28 @@ func hasPermission(next echo.HandlerFunc, permissionType string, read, write, ma
 			})
 		}
 
-		if permission.Read != read && permission.Read < read && permission.Admin != 1 {
+		if read == true && permission.Read == false && permission.Admin != true {
 			logger.WithFields(logger.Fields{"code": "CSPHP003", "userId": reqUser.ID, "type": permissionType, "typeId": c.Param(permissionType + "Id")}).Warnf("Unauthorized")
 			return c.JSON(http.StatusUnauthorized, ErrorResponse{
 				Code:    "CSPHP003",
 				Message: "Unauthorized",
 			})
 		}
-		if permission.Write != write && permission.Write < write && permission.Admin != 1 {
+		if write == true && permission.Write == false && permission.Admin != true {
 			logger.WithFields(logger.Fields{"code": "CSPHP004", "userId": reqUser.ID, "type": permissionType, "typeId": c.Param(permissionType + "Id")}).Warnf("Unauthorized")
 			return c.JSON(http.StatusUnauthorized, ErrorResponse{
 				Code:    "CSPHP004",
 				Message: "Unauthorized",
 			})
 		}
-		if permission.Manage != manage && permission.Manage < manage && permission.Admin != 1 {
+		if manage == true && permission.Manage == false && permission.Admin != true {
 			logger.WithFields(logger.Fields{"code": "CSPHP005", "userId": reqUser.ID, "type": permissionType, "typeId": c.Param(permissionType + "Id")}).Warnf("Unauthorized")
 			return c.JSON(http.StatusUnauthorized, ErrorResponse{
 				Code:    "CSPHP005",
 				Message: "Unauthorized",
 			})
 		}
-		if permission.Admin != admin && permission.Admin < admin {
+		if admin == true && permission.Admin == false {
 			logger.WithFields(logger.Fields{"code": "CSPHP006", "userId": reqUser.ID, "type": permissionType, "typeId": c.Param(permissionType + "Id")}).Warnf("Unauthorized")
 			return c.JSON(http.StatusUnauthorized, ErrorResponse{
 				Code:    "CSPHP006",
