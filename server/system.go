@@ -29,8 +29,13 @@ type ActionMessage struct {
 	Params     string
 }
 
+<<<<<<< HEAD
 var gatewayAddr string
 var wsconn *websocket.Conn
+=======
+// WSConn define the connection between casa server and gateway
+var WSConn *websocket.Conn
+>>>>>>> add route POST /gateways/:gatewayId/actions to call an action on gateway
 var queues []Datas
 var configs []sdk.Configuration
 var discovered []sdk.Device
@@ -77,17 +82,17 @@ func GetConfigFromGateway(addr string) {
 // InitConnection create websocket connection
 func InitConnection(con echo.Context) error {
 	var err error
-	wsconn, err = upgrader.Upgrade(con.Response(), con.Request(), nil) // error ignored for sake of simplicity
+	WSConn, err = upgrader.Upgrade(con.Response(), con.Request(), nil) // error ignored for sake of simplicity
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSDIC001"}).Errorf("%s", err.Error())
 		return err
 	}
-	defer wsconn.Close()
+	defer WSConn.Close()
 
 	for {
 		var wm WebsocketMessage
 
-		_, message, err := wsconn.ReadMessage()
+		_, message, err := WSConn.ReadMessage()
 		if err != nil {
 			logger.WithFields(logger.Fields{"code": "CSDIC002"}).Errorf("%s", err.Error())
 			continue
@@ -120,7 +125,17 @@ func GetDiscoveredDevices(c echo.Context) error {
 	logger.WithFields(logger.Fields{}).Debugf("Discover devices")
 	plugin := c.Param("plugin")
 
+<<<<<<< HEAD
 	resp, err := http.Get("http://" + gatewayAddr + "/v1/discover/" + plugin)
+=======
+	message := WebsocketMessage{
+		Action: "discoverDevices",
+		Body:   []byte(""),
+	}
+
+	marshMessage, _ := json.Marshal(message)
+	err := WSConn.WriteMessage(websocket.TextMessage, marshMessage)
+>>>>>>> add route POST /gateways/:gatewayId/actions to call an action on gateway
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSSGDDG001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
@@ -277,7 +292,7 @@ func Automations() {
 
 								marshMessage, _ := json.Marshal(message)
 								logger.WithFields(logger.Fields{}).Debugf("Action sent to gateway")
-								err = wsconn.WriteMessage(websocket.TextMessage, marshMessage)
+								err = WSConn.WriteMessage(websocket.TextMessage, marshMessage)
 								if err != nil {
 									logger.WithFields(logger.Fields{"code": "CSSA001"}).Errorf("%s", err.Error())
 									break
