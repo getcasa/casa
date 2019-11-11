@@ -105,7 +105,7 @@ func InitConnection(con echo.Context) error {
 		case "newData":
 			var datas Datas
 			json.Unmarshal(wm.Body, &datas)
-			SaveNewDatas(datas)
+			go SaveNewDatas(datas)
 		default:
 			continue
 		}
@@ -152,6 +152,7 @@ func GetDiscoveredDevices(c echo.Context) error {
 }
 
 // SaveNewDatas save receive datas from gateway in DB
+
 func SaveNewDatas(queue Datas) {
 	var device Device
 
@@ -276,12 +277,17 @@ func Automations() {
 								}
 
 								marshMessage, _ := json.Marshal(message)
-								logger.WithFields(logger.Fields{}).Debugf("Action sent to gateway")
-								err = wsconn.WriteMessage(websocket.TextMessage, marshMessage)
 								if err != nil {
 									logger.WithFields(logger.Fields{"code": "CSSA001"}).Errorf("%s", err.Error())
 									break
 								}
+								go func() {
+									logger.WithFields(logger.Fields{}).Debugf("Action sent to gateway")
+									err = wsconn.WriteMessage(websocket.TextMessage, marshMessage)
+									if err != nil {
+										logger.WithFields(logger.Fields{"code": "CSSA002"}).Errorf("%s", err.Error())
+									}
+								}()
 							}
 						}
 					}
