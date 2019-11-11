@@ -2,11 +2,13 @@ package server
 
 import (
 	"database/sql"
+	"encoding/json"
 	"net/http"
 	"reflect"
 
 	"github.com/ItsJimi/casa/logger"
 	"github.com/ItsJimi/casa/utils"
+	"github.com/gorilla/websocket"
 	"github.com/labstack/echo"
 	"github.com/oklog/ulid/v2"
 )
@@ -378,4 +380,69 @@ func GetPlugin(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, plugin)
+}
+
+type callActionReq struct {
+	ID     string
+	Action string
+	Params string
+}
+
+// CallAction call an action on selected gateway
+func CallAction(c echo.Context) error {
+	req := new(callActionReq)
+	if err := c.Bind(req); err != nil {
+		logger.WithFields(logger.Fields{"code": "CSSGCA001"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:    "CSSGCA001",
+			Message: "Wrong parameters",
+		})
+	}
+
+	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"ID", "Action"}); err != nil {
+		logger.WithFields(logger.Fields{"code": "CSSGCA002"}).Warnf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:    "CSSGCA002",
+			Message: err.Error(),
+		})
+	}
+
+	var device Device
+	err := DB.QueryRowx("SELECT * FROM devices WHERE id=$1", req.ID).StructScan(&device)
+
+	if err != nil {
+		logger.WithFields(logger.Fields{"code": "CSSGCA003"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusNotFound, ErrorResponse{
+			Code:    "CSSGCA003",
+			Message: "Device can't be found",
+		})
+	}
+
+	action := ActionMessage{
+		PhysicalID: device.PhysicalID,
+		Plugin:     device.Plugin,
+		Call:       req.Action,
+		Config:     device.Config,
+		Params:     req.Params,
+	}
+
+	byteAction, _ := json.Marshal(action)
+
+	message := WebsocketMessage{
+		Action: "callAction",
+		Body:   byteAction,
+	}
+
+	marshMessage, _ := json.Marshal(message)
+	err = WSConn.WriteMessage(websocket.TextMessage, marshMessage)
+	if err != nil {
+		logger.WithFields(logger.Fields{"code": "CSSGCA004"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusInternalServerError, MessageResponse{
+			Message: "Action can't be sent",
+		})
+	}
+
+	return c.JSON(http.StatusOK, MessageResponse{
+		Message: "Action sent to gateway",
+	})
 }

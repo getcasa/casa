@@ -71,6 +71,7 @@ func Start(port string) {
 	v1.DELETE("/gateways/:id", DeleteGateway)
 	v1.GET("/gateways/discover/:plugin", GetDiscoveredDevices)
 	v1.GET("/gateways/:id", GetGateway)
+	v1.POST("/gateways/:gatewayId/actions", CallAction) // TODO: Add permissions to CallAction
 
 	// Homes
 	v1.POST("/homes", AddHome)
