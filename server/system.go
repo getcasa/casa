@@ -29,6 +29,7 @@ type ActionMessage struct {
 	Params     string
 }
 
+var gatewayAddr string
 var wsconn *websocket.Conn
 var queues []Datas
 var configs []sdk.Configuration
@@ -98,10 +99,9 @@ func InitConnection(con echo.Context) error {
 		}
 
 		switch wm.Action {
-		case "discoverevices":
-			json.Unmarshal(wm.Body, &discovered)
 		case "newConnection":
-			GetConfigFromGateway(string(wm.Body))
+			gatewayAddr = string(wm.Body)
+			GetConfigFromGateway(gatewayAddr)
 		case "newData":
 			var datas Datas
 			json.Unmarshal(wm.Body, &datas)
@@ -116,38 +116,39 @@ func InitConnection(con echo.Context) error {
 
 // GetDiscoveredDevices return an array of futur discover
 func GetDiscoveredDevices(c echo.Context) error {
-	c.Param("gatewayId")
+	var discovered []sdk.Device
+	logger.WithFields(logger.Fields{}).Debugf("Discover devices")
+	plugin := c.Param("plugin")
 
-	message := WebsocketMessage{
-		Action: "discoverDevices",
-		Body:   []byte(""),
-	}
-
-	marshMessage, _ := json.Marshal(message)
-	err := wsconn.WriteMessage(websocket.TextMessage, marshMessage)
+	resp, err := http.Get("http://" + gatewayAddr + "/v1/discover/" + plugin)
 	if err != nil {
-		logger.WithFields(logger.Fields{"code": "CSSGDD001"}).Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSSGDDG001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
 			Code:    "CSSGDD001",
 			Message: err.Error(),
 		})
 	}
+	defer resp.Body.Close()
 
-	for len(discovered) == 0 {
-	}
-
-	marshDiscovered, err := json.Marshal(discovered)
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		logger.WithFields(logger.Fields{"code": "CSSGDD002"}).Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSSGDDG002"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:    "CSSGDD002",
+			Code:    "CSSGDDG002",
 			Message: err.Error(),
 		})
 	}
 
-	return c.JSON(http.StatusOK, MessageResponse{
-		Message: string(marshDiscovered),
-	})
+	err = json.Unmarshal(body, &discovered)
+	if err != nil {
+		logger.WithFields(logger.Fields{"code": "CSSGDDG003"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:    "CSSGDDG003",
+			Message: err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, discovered)
 }
 
 // SaveNewDatas save receive datas from gateway in DB
