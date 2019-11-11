@@ -30,7 +30,9 @@ type ActionMessage struct {
 }
 
 var gatewayAddr string
-var wsconn *websocket.Conn
+
+// WSConn define the websocket connected between casa server and gateway
+var WSConn *websocket.Conn
 var queues []Datas
 var configs []sdk.Configuration
 var discovered []sdk.Device
@@ -77,17 +79,17 @@ func GetConfigFromGateway(addr string) {
 // InitConnection create websocket connection
 func InitConnection(con echo.Context) error {
 	var err error
-	wsconn, err = upgrader.Upgrade(con.Response(), con.Request(), nil) // error ignored for sake of simplicity
+	WSConn, err = upgrader.Upgrade(con.Response(), con.Request(), nil) // error ignored for sake of simplicity
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSDIC001"}).Errorf("%s", err.Error())
 		return err
 	}
-	defer wsconn.Close()
+	defer WSConn.Close()
 
 	for {
 		var wm WebsocketMessage
 
-		_, message, err := wsconn.ReadMessage()
+		_, message, err := WSConn.ReadMessage()
 		if err != nil {
 			logger.WithFields(logger.Fields{"code": "CSDIC002"}).Errorf("%s", err.Error())
 			continue
@@ -283,7 +285,7 @@ func Automations() {
 								}
 								go func() {
 									logger.WithFields(logger.Fields{}).Debugf("Action sent to gateway")
-									err = wsconn.WriteMessage(websocket.TextMessage, marshMessage)
+									err = WSConn.WriteMessage(websocket.TextMessage, marshMessage)
 									if err != nil {
 										logger.WithFields(logger.Fields{"code": "CSSA002"}).Errorf("%s", err.Error())
 									}
