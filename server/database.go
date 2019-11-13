@@ -62,6 +62,7 @@ type Home struct {
 	ID        string `db:"id" json:"id"`
 	Name      string `db:"name" json:"name"`
 	Address   string `db:"address" json:"address"`
+	WifiSSID  string `db:"wifi_ssid" json:"wifiSsid"`
 	CreatedAt string `db:"created_at" json:"createdAt"`
 	UpdatedAt string `db:"updated_at" json:"updatedAt"`
 	CreatorID string `db:"creator_id" json:"creatorId"`

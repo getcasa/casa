@@ -10,8 +10,9 @@ import (
 )
 
 type addHomeReq struct {
-	Name    string
-	Address string
+	Name     string
+	Address  string
+	WifiSSID string
 }
 
 // AddHome route create and add user to an home
@@ -96,27 +97,7 @@ func UpdateHome(c echo.Context) error {
 		})
 	}
 
-	user := c.Get("user").(User)
-
-	var permission Permission
-	err := DB.Get(&permission, "SELECT manage, admin FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "home", c.Param("homeId"))
-	if err != nil {
-		logger.WithFields(logger.Fields{"code": "CSHUH003"}).Errorf("%s", err.Error())
-		return c.JSON(http.StatusNotFound, ErrorResponse{
-			Code:    "CSHUH003",
-			Message: "Home can't be found",
-		})
-	}
-
-	if permission.Manage == false && permission.Admin == false {
-		logger.WithFields(logger.Fields{"code": "CSHUH004"}).Warnf("Unauthorized")
-		return c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Code:    "CSHUH004",
-			Message: "Unauthorized modifications",
-		})
-	}
-
-	_, err = DB.Exec("UPDATE homes SET Name=$1, address=$2 WHERE id=$3", req.Name, req.Address, c.Param("homeId"))
+	_, err := DB.Exec("UPDATE homes SET name=$1, address=$2, wifi_ssid=$3 WHERE id=$4", req.Name, req.Address, req.WifiSSID, c.Param("homeId"))
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSHUH005"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
