@@ -42,6 +42,48 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
+// InitConnection create websocket connection
+func InitConnection(con echo.Context) error {
+	var err error
+	WSConn, err = upgrader.Upgrade(con.Response(), con.Request(), nil) // error ignored for sake of simplicity
+	if err != nil {
+		logger.WithFields(logger.Fields{"code": "CSDIC001"}).Errorf("%s", err.Error())
+		return err
+	}
+	defer WSConn.Close()
+
+	for {
+		var wm WebsocketMessage
+
+		_, message, err := WSConn.ReadMessage()
+		if err != nil {
+			logger.WithFields(logger.Fields{"code": "CSDIC002"}).Errorf("%s", err.Error())
+			continue
+		}
+		err = json.Unmarshal(message, &wm)
+		if err != nil {
+			logger.WithFields(logger.Fields{"code": "CSDIC003"}).Errorf("%s", err.Error())
+			continue
+		}
+
+		switch wm.Action {
+		case "newConnection":
+			gatewayAddr = string(wm.Body)
+			GetConfigFromGateway(gatewayAddr)
+		case "newData":
+			go func(data []byte) {
+				var datas Datas
+				json.Unmarshal(data, &datas)
+				SaveNewDatas(datas)
+			}(wm.Body)
+		default:
+			continue
+		}
+
+		logger.WithFields(logger.Fields{}).Debugf("recv: %s", message)
+	}
+}
+
 // GetConfigFromGateway get config from gateway
 func GetConfigFromGateway(addr string) {
 	var tmpConfigs []sdk.Configuration
@@ -73,46 +115,6 @@ func GetConfigFromGateway(addr string) {
 				configs = append(configs, tmpConf)
 			}
 		}
-	}
-}
-
-// InitConnection create websocket connection
-func InitConnection(con echo.Context) error {
-	var err error
-	WSConn, err = upgrader.Upgrade(con.Response(), con.Request(), nil) // error ignored for sake of simplicity
-	if err != nil {
-		logger.WithFields(logger.Fields{"code": "CSDIC001"}).Errorf("%s", err.Error())
-		return err
-	}
-	defer WSConn.Close()
-
-	for {
-		var wm WebsocketMessage
-
-		_, message, err := WSConn.ReadMessage()
-		if err != nil {
-			logger.WithFields(logger.Fields{"code": "CSDIC002"}).Errorf("%s", err.Error())
-			continue
-		}
-		err = json.Unmarshal(message, &wm)
-		if err != nil {
-			logger.WithFields(logger.Fields{"code": "CSDIC003"}).Errorf("%s", err.Error())
-			continue
-		}
-
-		switch wm.Action {
-		case "newConnection":
-			gatewayAddr = string(wm.Body)
-			GetConfigFromGateway(gatewayAddr)
-		case "newData":
-			var datas Datas
-			json.Unmarshal(wm.Body, &datas)
-			go SaveNewDatas(datas)
-		default:
-			continue
-		}
-
-		logger.WithFields(logger.Fields{}).Debugf("recv: %s", message)
 	}
 }
 
@@ -154,7 +156,6 @@ func GetDiscoveredDevices(c echo.Context) error {
 }
 
 // SaveNewDatas save receive datas from gateway in DB
-
 func SaveNewDatas(queue Datas) {
 	var device Device
 
