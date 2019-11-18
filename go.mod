@@ -26,4 +26,4 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )
 
-replace github.com/getcasa/sdk v0.0.0-20191107193439-b1803b625dc9 => ../casa-sdk
+replace github.com/getcasa/sdk v0.0.0-20191118092654-933ce149a3b6 => ../casa-sdk

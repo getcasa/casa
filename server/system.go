@@ -119,7 +119,7 @@ func GetConfigFromGateway(addr string) {
 
 // GetDiscoveredDevices return an array of futur discover
 func GetDiscoveredDevices(c echo.Context) error {
-	var discovered []sdk.Device
+	var discovered []sdk.DiscoveredDevice
 	logger.WithFields(logger.Fields{}).Debugf("Discover devices")
 	plugin := c.Param("plugin")
 
@@ -165,7 +165,7 @@ func SaveNewDatas(queue Datas) {
 	}
 	queue.DeviceID = device.ID
 
-	if FindFieldFromName(sdk.FindTriggerFromName(configFromPlugin(configs, device.Plugin).Triggers, device.PhysicalName).Fields, queue.Field).Direct {
+	if FindFieldFromName(sdk.FindDevicesFromName(configFromPlugin(configs, device.Plugin).Devices, device.PhysicalName).Triggers, queue.Field).Direct {
 		queues = append(queues, queue)
 	}
 
@@ -193,7 +193,7 @@ func Automations() {
 					for i := 0; i < len(auto.Trigger); i++ {
 						var device Device
 						err = DB.Get(&device, `SELECT * FROM devices WHERE id = $1`, auto.Trigger[i])
-						field := FindFieldFromName(sdk.FindTriggerFromName(configFromPlugin(configs, device.Plugin).Triggers, device.PhysicalName).Fields, auto.TriggerKey[i])
+						field := FindFieldFromName(sdk.FindDevicesFromName(configFromPlugin(configs, device.Plugin).Devices, device.PhysicalName).Triggers, auto.TriggerKey[i])
 
 						if field.Direct {
 							queue := FindDataFromID(queues, device.ID)
@@ -351,11 +351,11 @@ func FindDataFromID(datas []Datas, ID string) Datas {
 }
 
 // FindFieldFromName find field with name field
-func FindFieldFromName(fields []sdk.Field, name string) sdk.Field {
-	for _, field := range fields {
-		if field.Name == name {
-			return field
+func FindFieldFromName(triggers []sdk.Trigger, name string) sdk.Trigger {
+	for _, trigger := range triggers {
+		if trigger.Name == name {
+			return trigger
 		}
 	}
-	return sdk.Field{}
+	return sdk.Trigger{}
 }

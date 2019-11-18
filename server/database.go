@@ -138,6 +138,15 @@ type Datas struct {
 	CreatedAt string  `db:"created_at" json:"createdAt"`
 }
 
+// Logs struct in database
+type Logs struct {
+	ID        string `db:"id" json:"id"`
+	Type      string `db:"type" json:"type"` // automation, device
+	TypeID    string `db:"type_id" json:"typeId"`
+	Value     string `db:"value" json:"value"` // {"function": "toggle", "params": ""}
+	CreatedAt string `db:"created_at" json:"createdAt"`
+}
+
 // DB define the database object
 var DB *sqlx.DB
 
