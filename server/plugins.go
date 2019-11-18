@@ -8,6 +8,5 @@ import (
 
 // GetPlugins route get list of home plugins
 func GetPlugins(c echo.Context) error {
-	// TODO:
-	return c.JSON(http.StatusOK, MessageResponse{})
+	return c.JSON(http.StatusOK, Configs)
 }

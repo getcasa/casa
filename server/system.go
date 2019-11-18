@@ -29,12 +29,15 @@ type ActionMessage struct {
 	Params     string
 }
 
-var gatewayAddr string
+// GatewayAddr define the gateway connected
+var GatewayAddr string
 
 // WSConn define the websocket connected between casa server and gateway
 var WSConn *websocket.Conn
 var queues []Datas
-var configs []sdk.Configuration
+
+// Configs define plugins configuration
+var Configs []sdk.Configuration
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
@@ -67,8 +70,8 @@ func InitConnection(con echo.Context) error {
 
 		switch wm.Action {
 		case "newConnection":
-			gatewayAddr = string(wm.Body)
-			GetConfigFromGateway(gatewayAddr)
+			GatewayAddr = string(wm.Body)
+			GetConfigFromGateway(GatewayAddr)
 		case "newData":
 			go func(data []byte) {
 				var datas Datas
@@ -106,12 +109,12 @@ func GetConfigFromGateway(addr string) {
 		return
 	}
 
-	if len(configs) == 0 {
-		configs = tmpConfigs
+	if len(Configs) == 0 {
+		Configs = tmpConfigs
 	} else {
 		for _, tmpConf := range tmpConfigs {
-			if configFromPlugin(configs, tmpConf.Name).Name == "" {
-				configs = append(configs, tmpConf)
+			if configFromPlugin(Configs, tmpConf.Name).Name == "" {
+				Configs = append(Configs, tmpConf)
 			}
 		}
 	}
@@ -123,7 +126,7 @@ func GetDiscoveredDevices(c echo.Context) error {
 	logger.WithFields(logger.Fields{}).Debugf("Discover devices")
 	plugin := c.Param("plugin")
 
-	resp, err := http.Get("http://" + gatewayAddr + "/v1/discover/" + plugin)
+	resp, err := http.Get("http://" + GatewayAddr + "/v1/discover/" + plugin)
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSSGDDG001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
@@ -165,7 +168,7 @@ func SaveNewDatas(queue Datas) {
 	}
 	queue.DeviceID = device.ID
 
-	if FindFieldFromName(sdk.FindDevicesFromName(configFromPlugin(configs, device.Plugin).Devices, device.PhysicalName).Triggers, queue.Field).Direct {
+	if FindFieldFromName(sdk.FindDevicesFromName(configFromPlugin(Configs, device.Plugin).Devices, device.PhysicalName).Triggers, queue.Field).Direct {
 		queues = append(queues, queue)
 	}
 
@@ -193,7 +196,7 @@ func Automations() {
 					for i := 0; i < len(auto.Trigger); i++ {
 						var device Device
 						err = DB.Get(&device, `SELECT * FROM devices WHERE id = $1`, auto.Trigger[i])
-						field := FindFieldFromName(sdk.FindDevicesFromName(configFromPlugin(configs, device.Plugin).Devices, device.PhysicalName).Triggers, auto.TriggerKey[i])
+						field := FindFieldFromName(sdk.FindDevicesFromName(configFromPlugin(Configs, device.Plugin).Devices, device.PhysicalName).Triggers, auto.TriggerKey[i])
 
 						if field.Direct {
 							queue := FindDataFromID(queues, device.ID)
