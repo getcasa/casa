@@ -35,7 +35,6 @@ var gatewayAddr string
 var WSConn *websocket.Conn
 var queues []Datas
 var configs []sdk.Configuration
-var discovered []sdk.Device
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
@@ -284,13 +283,11 @@ func Automations() {
 									logger.WithFields(logger.Fields{"code": "CSSA001"}).Errorf("%s", err.Error())
 									break
 								}
-								go func() {
-									logger.WithFields(logger.Fields{}).Debugf("Action sent to gateway")
-									err = WSConn.WriteMessage(websocket.TextMessage, marshMessage)
-									if err != nil {
-										logger.WithFields(logger.Fields{"code": "CSSA002"}).Errorf("%s", err.Error())
-									}
-								}()
+								logger.WithFields(logger.Fields{}).Debugf("Action sent to gateway")
+								err = WSConn.WriteMessage(websocket.TextMessage, marshMessage)
+								if err != nil {
+									logger.WithFields(logger.Fields{"code": "CSSA002"}).Errorf("%s", err.Error())
+								}
 							}
 						}
 					}
