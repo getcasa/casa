@@ -160,6 +160,11 @@ func Start(port string) {
 		return hasPermission(next, "home", true, false, false, false)
 	})
 
+	// Home plugins
+	v1.GET("/homes/:homeId/plugins", GetPlugins, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "home", false, false, true, false)
+	})
+
 	// Users
 	v1.GET("/users/:userId", GetUser)
 	v1.PUT("/users/:userId", UpdateUserProfil)
