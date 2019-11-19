@@ -19,9 +19,8 @@ type addGatewayReq struct {
 }
 
 type linkGatewayReq struct {
-	ID     string
-	User   string
-	HomeID string
+	ID   string
+	User string
 }
 
 type updateGatewayReq struct {
@@ -79,7 +78,7 @@ func AddGateway(c echo.Context) error {
 
 // UpdateGateway route update gateway
 func UpdateGateway(c echo.Context) error {
-	id := c.Param("id")
+	id := c.Param("gatewayId")
 	req := new(updateGatewayReq)
 	if err := c.Bind(req); err != nil {
 		logger.WithFields(logger.Fields{"code": "CSGUG001"}).Errorf("%s", err.Error())
@@ -142,7 +141,7 @@ func UpdateGateway(c echo.Context) error {
 
 // DeleteGateway route delete gateway
 func DeleteGateway(c echo.Context) error {
-	id := c.Param("id")
+	id := c.Param("gatewayId")
 	user := c.Get("user").(User)
 
 	var gateway Gateway
@@ -216,7 +215,7 @@ func LinkGateway(c echo.Context) error {
 		})
 	}
 
-	_, err = DB.Exec("UPDATE gateways SET creator_id=$1, home_id=$2 WHERE id=$3", req.User, req.HomeID, req.ID)
+	_, err = DB.Exec("UPDATE gateways SET creator_id=$1, home_id=$2 WHERE id=$3", req.User, c.Param("homeId"), req.ID)
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSGLG004"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
@@ -262,7 +261,7 @@ func GetGateway(c echo.Context) error {
 	row := DB.QueryRowx(`
 		SELECT * FROM gateways
 		WHERE id=$1
-	 `, c.Param("id"))
+	 `, c.Param("gatewayId"))
 
 	if row == nil {
 		logger.WithFields(logger.Fields{"code": "CSGGG001"}).Errorf("QueryRowx: Select gateways")
@@ -383,7 +382,6 @@ func GetPlugin(c echo.Context) error {
 }
 
 type callActionReq struct {
-	ID     string
 	Action string
 	Params string
 }
@@ -408,7 +406,7 @@ func CallAction(c echo.Context) error {
 	}
 
 	var device Device
-	err := DB.QueryRowx("SELECT * FROM devices WHERE id=$1", req.ID).StructScan(&device)
+	err := DB.QueryRowx("SELECT * FROM devices WHERE id=$1", c.Param("deviceId")).StructScan(&device)
 
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSSGCA003"}).Errorf("%s", err.Error())

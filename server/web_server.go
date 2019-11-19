@@ -65,14 +65,6 @@ func Start(port string) {
 	// Signout
 	v1.POST("/signout", SignOut)
 
-	// Gateway
-	v1.POST("/gateways/link", LinkGateway)
-	v1.PUT("/gateways/:id", UpdateGateway)
-	v1.DELETE("/gateways/:id", DeleteGateway)
-	v1.GET("/gateways/discover/:plugin", GetDiscoveredDevices)
-	v1.GET("/gateways/:id", GetGateway)
-	v1.POST("/gateways/:gatewayId/actions", CallAction) // TODO: Add permissions to CallAction
-
 	// Homes
 	v1.POST("/homes", AddHome)
 	v1.PUT("/homes/:homeId", UpdateHome, func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -141,6 +133,9 @@ func Start(port string) {
 	v1.GET("/homes/:homeId/rooms/:roomId/devices/:deviceId", GetDevice, func(next echo.HandlerFunc) echo.HandlerFunc {
 		return hasPermission(next, "device", true, false, false, false)
 	})
+	v1.POST("/homes/:homeId/rooms/:roomId/devices/:deviceId/actions", CallAction, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "device", false, true, false, false)
+	})
 
 	// Automations
 	v1.POST("/homes/:homeId/automations", AddAutomation, func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -160,9 +155,26 @@ func Start(port string) {
 		return hasPermission(next, "home", true, false, false, false)
 	})
 
-	// Home plugins
+	// Plugins
 	v1.GET("/homes/:homeId/plugins", GetPlugins, func(next echo.HandlerFunc) echo.HandlerFunc {
 		return hasPermission(next, "home", false, false, true, false)
+	})
+
+	// Gateways
+	v1.POST("/homes/:homeId/gateways/link", LinkGateway, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "home", false, false, true, false)
+	})
+	v1.PUT("/homes/:homeId/gateways/:gatewayId", UpdateGateway, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "home", false, false, true, false)
+	})
+	v1.DELETE("/homes/:homeId/gateways/:gatewayId", DeleteGateway, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "home", false, false, true, false)
+	})
+	v1.GET("/homes/:homeId/gateways/discover/:plugin", GetDiscoveredDevices, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "home", false, false, true, false)
+	})
+	v1.GET("/homes/:homeId/gateways/:gatewayId", GetGateway, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "home", true, false, false, false)
 	})
 
 	// Users
