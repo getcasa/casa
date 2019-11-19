@@ -147,9 +147,9 @@ func Start(port string) {
 		return hasPermission(next, "home", false, true, false, false)
 	})
 	// TODO: Do Update
-	// v1.PUT("/homes/:homeId/automations/:automationId", UpdateAutomation, func(next echo.HandlerFunc) echo.HandlerFunc {
-	// 	return hasPermission(next, "home", false, true, false, false)
-	// })
+	v1.PUT("/homes/:homeId/automations/:automationId", UpdateAutomation, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "home", false, true, false, false)
+	})
 	v1.DELETE("/homes/:homeId/automations/:automationId", DeleteAutomation, func(next echo.HandlerFunc) echo.HandlerFunc {
 		return hasPermission(next, "home", false, false, true, false)
 	})

@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"database/sql"
 	"errors"
 	"reflect"
 	"strings"
@@ -23,4 +24,15 @@ func MissingFields(c echo.Context, val reflect.Value, keys []string) error {
 		return err
 	}
 	return nil
+}
+
+//NewNullString transform string into nullstring
+func NewNullString(s string) sql.NullString {
+	if len(s) == 0 {
+		return sql.NullString{}
+	}
+	return sql.NullString{
+		String: s,
+		Valid:  true,
+	}
 }

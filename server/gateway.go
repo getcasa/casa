@@ -126,7 +126,7 @@ func UpdateGateway(c echo.Context) error {
 		})
 	}
 
-	_, err = DB.Exec("UPDATE gateways SET Name=$1 WHERE id=$2", req.Name, gateway.ID)
+	_, err = DB.Exec("UPDATE gateways SET Name=COALESCE($1, name) WHERE id=$2", utils.NewNullString(req.Name), gateway.ID)
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSGUG006"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{

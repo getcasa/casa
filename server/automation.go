@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"reflect"
 
@@ -114,64 +115,45 @@ func AddAutomation(c echo.Context) error {
 	})
 }
 
-// // UpdateAutomation route update automation
-// func UpdateAutomation(c echo.Context) error {
-// 	req := new(addAutomationReq)
-// 	if err := c.Bind(req); err != nil {
-// 		fmt.Println(err)
-// 		return err
-// 	}
-// 	var missingFields []string
-// 	if req.Name == "" {
-// 		missingFields = append(missingFields, "name")
-// 	}
-// 	if req.Status == nil {
-// 		missingFields = append(missingFields, "Status")
-// 	}
-// 	if len(missingFields) >= 2 {
-// 		return c.JSON(http.StatusBadRequest, MessageResponse{
-// 			Message: "Need one field (Name, RoomID)",
-// 		})
-// 	}
+// UpdateAutomation route update automation
+func UpdateAutomation(c echo.Context) error {
+	req := new(addAutomationReq)
+	if err := c.Bind(req); err != nil {
+		logger.WithFields(logger.Fields{"code": "CSAUA001"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:    "CSAAA001",
+			Message: "Wrong parameters",
+		})
+	}
 
-// 	user := c.Get("user").(User)
+	request := `UPDATE automations
+	SET name = COALESCE($1, name),
 
-// 	var permission Permission
-// 	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "automation", c.Param("automationId"))
-// 	if err != nil {
-// 		fmt.Println(err)
-// 		return c.JSON(http.StatusNotFound, MessageResponse{
-// 			Message: "Automation not found",
-// 		})
-// 	}
+	trigger = COALESCE($2, trigger),
+	trigger_key = COALESCE($3, trigger_key),
+	trigger_operator = COALESCE($4, trigger_operator),
+	trigger_value = COALESCE($5, trigger_value),
+	action = COALESCE($6, action),
+	action_call = COALESCE($7, action_call),
+	action_value = COALESCE($8, action_value)
 
-// 	if permission.Manage == 0 && permission.Admin == 0 {
-// 		return c.JSON(http.StatusUnauthorized, MessageResponse{
-// 			Message: "Unauthorized modifications",
-// 		})
-// 	}
-// 	request := "UPDATE automations SET "
-// 	if req.Name != "" {
-// 		request += "Name='" + req.Name + "'"
-// 		if req.RoomID != "" {
-// 			request += ", room_id='" + req.RoomID + "'"
-// 		}
-// 	} else if req.RoomID != "" {
-// 		request += "room_id='" + req.RoomID + "'"
-// 	}
-// 	request += " WHERE id=$1"
-// 	_, err = DB.Exec(request, c.Param("automationId"))
-// 	if err != nil {
-// 		fmt.Println(err)
-// 		return c.JSON(http.StatusInternalServerError, MessageResponse{
-// 			Message: "Error 5: Can't update automation",
-// 		})
-// 	}
+	WHERE id=$9`
 
-// 	return c.JSON(http.StatusOK, MessageResponse{
-// 		Message: "Automation updated",
-// 	})
-// }
+	fmt.Println(req.Trigger)
+
+	_, err := DB.Exec(request, utils.NewNullString(req.Name), pq.Array(req.Trigger), pq.Array(req.TriggerKey), pq.Array(req.TriggerOperator), pq.Array(req.TriggerValue), pq.Array(req.Action), pq.Array(req.ActionCall), pq.Array(req.ActionValue), c.Param("automationId"))
+	if err != nil {
+		logger.WithFields(logger.Fields{"code": "CSAUA002"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:    "CSAUA002",
+			Message: "Automation can't be updated",
+		})
+	}
+
+	return c.JSON(http.StatusOK, MessageResponse{
+		Message: "Automation updated",
+	})
+}
 
 // DeleteAutomation route delete automation
 func DeleteAutomation(c echo.Context) error {

@@ -106,44 +106,8 @@ func UpdateDevice(c echo.Context) error {
 		})
 	}
 
-	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Name", "RoomID"}); err != nil {
-		logger.WithFields(logger.Fields{"code": "CSDUD002"}).Errorf("%s", err.Error())
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:    "CSDUD002",
-			Message: err.Error(),
-		})
-	}
-
-	user := c.Get("user").(User)
-
-	var permission Permission
-	err := DB.Get(&permission, "SELECT * FROM permissions WHERE user_id=$1 AND type=$2 AND type_id=$3", user.ID, "device", c.Param("deviceId"))
-	if err != nil {
-		logger.WithFields(logger.Fields{"code": "CSDUD003"}).Errorf("%s", err.Error())
-		return c.JSON(http.StatusNotFound, ErrorResponse{
-			Code:    "CSDUD003",
-			Message: "Device can't be found",
-		})
-	}
-
-	if permission.Manage == false && permission.Admin == false {
-		logger.WithFields(logger.Fields{"code": "CSDUD004"}).Warnf("Unauthorized")
-		return c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Code:    "CSDUD004",
-			Message: "Unauthorized modifications",
-		})
-	}
-	request := "UPDATE devices SET "
-	if req.Name != "" {
-		request += "Name='" + req.Name + "'"
-		if req.RoomID != "" {
-			request += ", room_id='" + req.RoomID + "'"
-		}
-	} else if req.RoomID != "" {
-		request += "room_id='" + req.RoomID + "'"
-	}
-	request += " WHERE id=$1"
-	_, err = DB.Exec(request, c.Param("deviceId"))
+	request := "UPDATE devices SET name = COALESCE($1, name), room_id = COALESCE($2, room_id) WHERE id = $3"
+	_, err := DB.Exec(request, utils.NewNullString(req.Name), utils.NewNullString(req.RoomID), c.Param("deviceId"))
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSDUD005"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{

@@ -89,15 +89,7 @@ func UpdateHome(c echo.Context) error {
 		})
 	}
 
-	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Name"}); err != nil {
-		logger.WithFields(logger.Fields{"code": "CSHUH002"}).Errorf("%s", err.Error())
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Code:    "CSHUH002",
-			Message: err.Error(),
-		})
-	}
-
-	_, err := DB.Exec("UPDATE homes SET name=$1, address=$2, wifi_ssid=$3 WHERE id=$4", req.Name, req.Address, req.WifiSSID, c.Param("homeId"))
+	_, err := DB.Exec("UPDATE homes SET name=COALESCE($1, name), address=COALESCE($2, address), wifi_ssid=COALESCE($3, wifi_ssid) WHERE id=$4", utils.NewNullString(req.Name), utils.NewNullString(req.Address), utils.NewNullString(req.WifiSSID), c.Param("homeId"))
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSHUH005"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
