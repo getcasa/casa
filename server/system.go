@@ -290,8 +290,13 @@ func Automations() {
 								err = WSConn.WriteMessage(websocket.TextMessage, marshMessage)
 								if err != nil {
 									logger.WithFields(logger.Fields{"code": "CSSA002"}).Errorf("%s", err.Error())
+									continue
 								}
 							}
+						}
+						_, err := DB.Query("INSERT INTO logs (id, type, type_id, value) VALUES (generate_ulid(), $1, $2, $3)", "automation", auto.ID, "")
+						if err != nil {
+							logger.WithFields(logger.Fields{"code": "CSSA003"}).Errorf("%s", err.Error())
 						}
 					}
 				}

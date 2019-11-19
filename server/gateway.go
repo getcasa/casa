@@ -442,6 +442,11 @@ func CallAction(c echo.Context) error {
 		})
 	}
 
+	_, err = DB.Query("INSERT INTO logs (id, type, type_id, value) VALUES (generate_ulid(), $1, $2, $3)", "device", device.ID, string(byteAction))
+	if err != nil {
+		logger.WithFields(logger.Fields{"code": "CSSGCA005"}).Errorf("%s", err.Error())
+	}
+
 	return c.JSON(http.StatusOK, MessageResponse{
 		Message: "Action sent to gateway",
 	})
