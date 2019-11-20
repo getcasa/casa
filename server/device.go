@@ -189,9 +189,9 @@ type deviceRes struct {
 	PhysicalName string `json:"physicalName"`
 	Config       string `json:"config"`
 	Plugin       string `json:"plugin"`
-	RoomID       string `json:"room_id"`
-	CreatedAt    string `json:"created_at"`
-	UpdatedAt    string `json:"updated_at"`
+	RoomID       string `json:"roomId"`
+	CreatedAt    string `json:"createdAt"`
+	UpdatedAt    string `json:"updatedAt"`
 	Creator      User   `json:"creator"`
 	Read         bool   `json:"read"`
 	Write        bool   `json:"write"`
