@@ -283,17 +283,6 @@ func GetAutomation(c echo.Context) error {
 		})
 	}
 
-	auto.Triggers = "[" + auto.Triggers[1:len(auto.Triggers)-1] + "]"
-	var arrayJSON []string
-	err = json.Unmarshal([]byte(auto.Triggers), &arrayJSON)
-
-	var listTrigger []Device
-	for _, elem := range arrayJSON {
-		var trigger Device
-		err = json.Unmarshal([]byte(elem), &trigger)
-		listTrigger = append(listTrigger, trigger)
-	}
-
 	return c.JSON(http.StatusOK, automationStruct{
 		ID:              auto.ID,
 		HomeID:          auto.HomeID,
@@ -316,12 +305,19 @@ func deviceJSONToStruct(str string) []Device {
 	str = "[" + str[1:len(str)-1] + "]"
 	var arrayJSON []string
 	err := json.Unmarshal([]byte(str), &arrayJSON)
-	fmt.Println(err)
+	if err != nil {
+		logger.WithFields(logger.Fields{"code": "CSADJTS001"}).Errorf("%s", err.Error())
+		return []Device{}
+	}
 
 	var listTrigger []Device
 	for _, elem := range arrayJSON {
 		var trigger Device
 		err = json.Unmarshal([]byte(elem), &trigger)
+		if err != nil {
+			logger.WithFields(logger.Fields{"code": "CSADJTS002"}).Errorf("%s", err.Error())
+			return []Device{}
+		}
 		listTrigger = append(listTrigger, trigger)
 	}
 
