@@ -1,7 +1,6 @@
 package server
 
 import (
-	"database/sql"
 	"net/http"
 	"reflect"
 
@@ -168,17 +167,17 @@ func DeleteDevice(c echo.Context) error {
 type permissionDevice struct {
 	Permission
 	User
-	DeviceID           string         `db:"d_id"`
-	DeviceName         string         `db:"d_name"`
-	DeviceIcon         sql.NullString `db:"d_icon"`
-	DeviceRoomID       string         `db:"d_roomid"`
-	DevicePlugin       string         `db:"d_plugin"`
-	DeviceGatewayID    string         `db:"d_gatewayid"`
-	DevicePhysicalID   string         `db:"d_physicalid"`
-	DevicePhysicalName string         `db:"d_physicalname"`
-	DeviceConfig       string         `db:"d_config"`
-	DeviceCreatedAt    string         `db:"d_createdat"`
-	DeviceUpdatedAt    string         `db:"d_updatedat"`
+	DeviceID           string `db:"d_id"`
+	DeviceName         string `db:"d_name"`
+	DeviceIcon         string `db:"d_icon"`
+	DeviceRoomID       string `db:"d_roomid"`
+	DevicePlugin       string `db:"d_plugin"`
+	DeviceGatewayID    string `db:"d_gatewayid"`
+	DevicePhysicalID   string `db:"d_physicalid"`
+	DevicePhysicalName string `db:"d_physicalname"`
+	DeviceConfig       string `db:"d_config"`
+	DeviceCreatedAt    string `db:"d_createdat"`
+	DeviceUpdatedAt    string `db:"d_updatedat"`
 }
 
 type deviceRes struct {
@@ -209,8 +208,8 @@ func GetDevices(c echo.Context) error {
 		devices.id as d_id,	devices.name AS d_name, devices.icon AS d_icon, devices.room_id AS d_roomid, devices.gateway_id AS d_gatewayid, devices.physical_id AS d_physicalid, devices.physical_name AS d_physicalname, devices.config AS d_config, devices.plugin AS d_plugin, devices.plugin AS d_plugin, devices.created_at AS d_createdat FROM permissions
 		JOIN devices ON permissions.type_id = devices.id
 		JOIN users ON devices.creator_id = users.id
-		WHERE type=$1 AND user_id=$2 AND (permissions.read=true OR permissions.admin=true)
-	`, "device", user.ID)
+		WHERE permissions.type=$1 AND permissions.user_id=$2 AND devices.room_id=$3 AND (permissions.read=true OR permissions.admin=true)
+	`, "device", user.ID, c.Param("roomId"))
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSDGDS001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
@@ -233,6 +232,7 @@ func GetDevices(c echo.Context) error {
 		devices = append(devices, deviceRes{
 			ID:           permission.DeviceID,
 			Name:         permission.DeviceName,
+			Icon:         permission.DeviceIcon,
 			RoomID:       permission.DeviceRoomID,
 			GatewayID:    permission.DeviceGatewayID,
 			PhysicalID:   permission.DevicePhysicalID,
@@ -259,8 +259,8 @@ func GetDevice(c echo.Context) error {
 		devices.id as d_id,	devices.name AS d_name, devices.room_id AS d_roomid, devices.gateway_id AS d_gatewayid, devices.physical_id AS d_physicalid, devices.physical_name AS d_physicalname, devices.config AS d_config, devices.plugin AS d_plugin, devices.created_at AS d_createdat FROM permissions
 		JOIN devices ON permissions.type_id = devices.id
 		JOIN users ON devices.creator_id = users.id
-		WHERE type=$1 AND type_id=$2 AND user_id=$3
-	`, "device", c.Param("deviceId"), user.ID)
+		WHERE permissions.type=$1 AND permissions.type_id=$2 AND permissions.user_id=$3 AND devices.room_id=$4
+	`, "device", c.Param("deviceId"), user.ID, c.Param("roomId"))
 
 	if row == nil {
 		logger.WithFields(logger.Fields{"code": "CSDGD001"}).Errorf("QueryRowx: Select permissions")
@@ -283,6 +283,7 @@ func GetDevice(c echo.Context) error {
 	return c.JSON(http.StatusOK, deviceRes{
 		ID:           permission.DeviceID,
 		Name:         permission.DeviceName,
+		Icon:         permission.DeviceIcon,
 		RoomID:       permission.DeviceRoomID,
 		GatewayID:    permission.DeviceGatewayID,
 		PhysicalID:   permission.DevicePhysicalID,
