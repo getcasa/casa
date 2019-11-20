@@ -397,7 +397,7 @@ func CallAction(c echo.Context) error {
 		})
 	}
 
-	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"ID", "Action"}); err != nil {
+	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Action"}); err != nil {
 		logger.WithFields(logger.Fields{"code": "CSSGCA002"}).Warnf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
 			Code:    "CSSGCA002",
