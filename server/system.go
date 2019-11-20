@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ItsJimi/casa/logger"
@@ -152,6 +153,44 @@ func GetDiscoveredDevices(c echo.Context) error {
 			Code:    "CSSGDDG003",
 			Message: err.Error(),
 		})
+	}
+
+	arrayPhysicalID := []string{}
+	for _, disco := range discovered {
+		arrayPhysicalID = append(arrayPhysicalID, disco.PhysicalID)
+	}
+
+	rows, err := DB.Queryx(`
+		SELECT physical_id
+		FROM devices
+		JOIN gateways ON devices.gateway_id = gateways.id
+		WHERE physical_id = ANY($1) AND gateways.home_id = $2
+	`, "{"+strings.Join(arrayPhysicalID, ",")+"}", c.Param("homeId"))
+	if err != nil {
+		logger.WithFields(logger.Fields{"code": "CSSGDDG004"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:    "CSSGDDG004",
+			Message: err.Error(),
+		})
+	}
+
+	for rows.Next() {
+		var device Device
+		err := rows.StructScan(&device)
+		if err != nil {
+			logger.WithFields(logger.Fields{"code": "CSSGDDG005"}).Errorf("%s", err.Error())
+			return c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Code:    "CSSGDDG005",
+				Message: err.Error(),
+			})
+		}
+
+		for ind, disco := range discovered {
+			if disco.PhysicalID == device.PhysicalID {
+				discovered = append(discovered[:ind], discovered[ind+1:]...)
+				continue
+			}
+		}
 	}
 
 	return c.JSON(http.StatusOK, discovered)
