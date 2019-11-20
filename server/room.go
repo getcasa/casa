@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -9,7 +8,6 @@ import (
 	"github.com/ItsJimi/casa/logger"
 	"github.com/ItsJimi/casa/utils"
 	"github.com/labstack/echo"
-	"github.com/lib/pq"
 )
 
 type addRoomReq struct {
@@ -174,36 +172,26 @@ func DeleteRoom(c echo.Context) error {
 }
 
 type permissionRoom struct {
-	PermissionTypeID string `db:"p_type_id"`
-	PermissionRead   bool   `db:"p_read"`
-	PermissionWrite  bool   `db:"p_write"`
-	PermissionManage bool   `db:"p_manage"`
-	PermissionAdmin  bool   `db:"p_admin"`
-	UserID           string `db:"u_id"`
-	UserFirstname    string `db:"u_firstname"`
-	Devices          []string
-	RoomID           string `db:"r_id"`
-	RoomName         string `db:"r_name"`
-	RoomHomeID       string `db:"r_home_id"`
-	RoomCreatedAt    string `db:"r_created_at"`
-}
-
-type minimalUser struct {
-	ID        string `json:"id"`
-	Firstname string `json:"firstname"`
+	Permission
+	User
+	RoomID        string `db:"r_id"`
+	RoomName      string `db:"r_name"`
+	RoomHomeID    string `db:"r_homeid"`
+	RoomCreatedAt string `db:"r_createdat"`
+	RoomUpdatedAt string `db:"r_updatedat"`
 }
 
 type roomRes struct {
-	ID        string      `json:"id"`
-	Name      string      `json:"name"`
-	HomeID    string      `json:"homeId"`
-	CreatedAt string      `json:"createdAt"`
-	Creator   minimalUser `json:"creator"`
-	Read      bool        `json:"read"`
-	Write     bool        `json:"write"`
-	Manage    bool        `json:"manage"`
-	Admin     bool        `json:"admin"`
-	Devices   []Device    `json:"devices"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	HomeID    string `json:"homeId"`
+	CreatedAt string `json:"createdAt"`
+	UpdatedAt string `json:"updatedAt"`
+	Creator   User   `json:"creator"`
+	Read      bool   `json:"read"`
+	Write     bool   `json:"write"`
+	Manage    bool   `json:"manage"`
+	Admin     bool   `json:"admin"`
 }
 
 // GetRooms route get list of user rooms
@@ -211,24 +199,11 @@ func GetRooms(c echo.Context) error {
 	user := c.Get("user").(User)
 
 	rows, err := DB.Queryx(`
-		SELECT t.*, array(SELECT to_json(devices.*) FROM devices JOIN rooms ON rooms.id = devices.room_id WHERE rooms.id = r_id ) AS devices 
-		FROM (
-			SELECT permissions.type_id as p_type_id,
-			permissions.read as p_read,
-			permissions.write as p_write,
-			permissions.manage as p_manage,
-			permissions.admin as p_admin,
-			users.id as u_id,
-			users.firstname as u_firstname,
-			rooms.id as r_id,
-			rooms.name AS r_name,
-			rooms.home_id AS r_home_id,
-			rooms.created_at AS r_created_at
-			FROM permissions
-			JOIN rooms ON permissions.type_id = rooms.id
-			JOIN users ON rooms.creator_id = users.id
-			WHERE type=$1 AND user_id=$2 AND rooms.home_id=$3 AND (permissions.read=true OR permissions.admin=true)
-		) AS t
+		SELECT permissions.*, users.*,
+		rooms.id as r_id,	rooms.name AS r_name, rooms.home_id AS r_homeid, rooms.created_at AS r_createdat, rooms.updated_at AS r_updatedat FROM permissions
+		JOIN rooms ON permissions.type_id = rooms.id
+		JOIN users ON rooms.creator_id = users.id
+		WHERE permissions.type=$1 AND permissions.user_id=$2 AND rooms.home_id=$3 AND (permissions.read=true OR permissions.admin=true)
 	`, "room", user.ID, c.Param("homeId"))
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSRGRS001"}).Errorf("%s", err.Error())
@@ -241,7 +216,7 @@ func GetRooms(c echo.Context) error {
 	rooms := []roomRes{}
 	for rows.Next() {
 		var permission permissionRoom
-		err := rows.Scan(&permission.PermissionTypeID, &permission.PermissionRead, &permission.PermissionWrite, &permission.PermissionManage, &permission.PermissionAdmin, &permission.UserID, &permission.UserFirstname, &permission.RoomID, &permission.RoomName, &permission.RoomHomeID, &permission.RoomCreatedAt, pq.Array(&permission.Devices))
+		err := rows.StructScan(&permission)
 		if err != nil {
 			logger.WithFields(logger.Fields{"code": "CSRGRS002"}).Errorf("%s", err.Error())
 			return c.JSON(http.StatusInternalServerError, ErrorResponse{
@@ -250,36 +225,17 @@ func GetRooms(c echo.Context) error {
 			})
 		}
 
-		devices := []Device{}
-		for _, device := range permission.Devices {
-			var _device Device
-			err = json.Unmarshal([]byte(device), &_device)
-			if err != nil {
-				logger.WithFields(logger.Fields{"code": "CSRGRS003"}).Errorf("%s", err.Error())
-				return c.JSON(http.StatusInternalServerError, ErrorResponse{
-					Code:    "CSRGRS003",
-					Message: "Rooms can't be retrieved",
-				})
-			}
-
-			devices = append(devices, _device)
-		}
-
-		minimalUser := minimalUser{
-			ID:        permission.UserID,
-			Firstname: permission.UserFirstname,
-		}
 		rooms = append(rooms, roomRes{
 			ID:        permission.RoomID,
 			Name:      permission.RoomName,
 			HomeID:    permission.RoomHomeID,
 			CreatedAt: permission.RoomCreatedAt,
-			Creator:   minimalUser,
-			Read:      permission.PermissionRead,
-			Write:     permission.PermissionWrite,
-			Manage:    permission.PermissionManage,
-			Admin:     permission.PermissionAdmin,
-			Devices:   devices,
+			UpdatedAt: permission.RoomUpdatedAt,
+			Creator:   permission.User,
+			Read:      permission.Permission.Read,
+			Write:     permission.Permission.Write,
+			Manage:    permission.Permission.Manage,
+			Admin:     permission.Permission.Admin,
 		})
 	}
 
@@ -294,25 +250,12 @@ func GetRoom(c echo.Context) error {
 
 	var permission permissionRoom
 	err := DB.QueryRowx(`
-	SELECT t.*, array(SELECT to_json(devices.*) FROM devices JOIN rooms ON rooms.id = devices.room_id WHERE rooms.id = r_id ) AS devices 
-	FROM (
-		SELECT permissions.type_id as p_type_id,
-		permissions.read as p_read,
-		permissions.write as p_write,
-		permissions.manage as p_manage,
-		permissions.admin as p_admin,
-		users.id as u_id,
-		users.firstname as u_firstname,
-		rooms.id as r_id,
-		rooms.name AS r_name,
-		rooms.home_id AS r_home_id,
-		rooms.created_at AS r_created_at
-		FROM permissions
+		SELECT permissions.*, users.*,
+		rooms.id as r_id,	rooms.name AS r_name, rooms.home_id AS r_homeid, rooms.created_at AS r_createdat, rooms.updated_at AS r_updatedat FROM permissions
 		JOIN rooms ON permissions.type_id = rooms.id
 		JOIN users ON rooms.creator_id = users.id
-		WHERE type=$1 AND type_id=$2 AND user_id=$3
-	) AS t
-	`, "room", c.Param("roomId"), user.ID).Scan(&permission.PermissionTypeID, &permission.PermissionRead, &permission.PermissionWrite, &permission.PermissionManage, &permission.PermissionAdmin, &permission.UserID, &permission.UserFirstname, &permission.RoomID, &permission.RoomName, &permission.RoomHomeID, &permission.RoomCreatedAt, pq.Array(&permission.Devices))
+		WHERE permissions.type=$1 AND permissions.type_id=$2 AND permissions.user_id=$3
+	`, "room", c.Param("roomId"), user.ID).StructScan(&permission)
 
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSRGR001"}).Errorf("QueryRowx: Select error")
@@ -322,35 +265,16 @@ func GetRoom(c echo.Context) error {
 		})
 	}
 
-	devices := []Device{}
-	for _, device := range permission.Devices {
-		var _device Device
-		err = json.Unmarshal([]byte(device), &_device)
-		if err != nil {
-			logger.WithFields(logger.Fields{"code": "CSRGRS003"}).Errorf("%s", err.Error())
-			return c.JSON(http.StatusInternalServerError, ErrorResponse{
-				Code:    "CSRGRS003",
-				Message: "Room can't be retrieved",
-			})
-		}
-
-		devices = append(devices, _device)
-	}
-
-	minimalUser := minimalUser{
-		ID:        permission.UserID,
-		Firstname: permission.UserFirstname,
-	}
 	return c.JSON(http.StatusOK, roomRes{
 		ID:        permission.RoomID,
 		Name:      permission.RoomName,
 		HomeID:    permission.RoomHomeID,
 		CreatedAt: permission.RoomCreatedAt,
-		Creator:   minimalUser,
-		Read:      permission.PermissionRead,
-		Write:     permission.PermissionWrite,
-		Manage:    permission.PermissionManage,
-		Admin:     permission.PermissionAdmin,
-		Devices:   devices,
+		UpdatedAt: permission.RoomUpdatedAt,
+		Creator:   permission.User,
+		Read:      permission.Permission.Read,
+		Write:     permission.Permission.Write,
+		Manage:    permission.Permission.Manage,
+		Admin:     permission.Permission.Admin,
 	})
 }
