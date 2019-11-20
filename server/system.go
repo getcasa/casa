@@ -75,7 +75,7 @@ func InitConnection(con echo.Context) error {
 			GetConfigFromGateway(GatewayAddr)
 		case "newData":
 			go func(data []byte) {
-				var datas Datas
+				var datas []Datas
 				json.Unmarshal(data, &datas)
 				SaveNewDatas(datas)
 			}(wm.Body)
@@ -197,27 +197,65 @@ func GetDiscoveredDevices(c echo.Context) error {
 }
 
 // SaveNewDatas save receive datas from gateway in DB
-func SaveNewDatas(queue Datas) {
-	var device Device
+func SaveNewDatas(datas []Datas) {
+	var devices []Device
+	var arrayID []string
 
-	err := DB.Get(&device, `SELECT id, physical_name, plugin FROM devices WHERE physical_id = $1`, queue.DeviceID)
+	for _, data := range datas {
+		if !searchStringInArray(arrayID, data.DeviceID) {
+			arrayID = append(arrayID, data.DeviceID)
+		}
+	}
+
+	rows, err := DB.Queryx(`SELECT id, physical_name, physical_id, plugin FROM devices WHERE physical_id = ANY($1)`, "{"+strings.Join(arrayID, ",")+"}")
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSDSND001"}).Errorf("%s", err.Error())
 		return
 	}
-	queue.DeviceID = device.ID
 
-	if FindFieldFromName(sdk.FindDevicesFromName(configFromPlugin(Configs, device.Plugin).Devices, device.PhysicalName).Triggers, queue.Field).Direct {
-		queues = append(queues, queue)
+	for rows.Next() {
+		var device Device
+		err := rows.StructScan(&device)
+		if err != nil {
+			logger.WithFields(logger.Fields{"code": "CSDSND002"}).Errorf("%s", err.Error())
+		}
+		devices = append(devices, device)
 	}
 
-	_, err = DB.Exec("INSERT INTO datas (id, device_id, field, value_nbr, value_str, value_bool) VALUES ($1, $2, $3, $4, $5, $6)",
-		queue.ID, queue.DeviceID, queue.Field, queue.ValueNbr, queue.ValueStr, queue.ValueBool)
+	for _, data := range datas {
+		device := findDeviceFromID(devices, data.DeviceID)
+		if device != nil {
+			data.DeviceID = device.ID
 
-	if err != nil {
-		logger.WithFields(logger.Fields{"code": "CSDSND002"}).Errorf("%s", err.Error())
-		return
+			if FindFieldFromName(sdk.FindDevicesFromName(configFromPlugin(Configs, device.Plugin).Devices, device.PhysicalName).Triggers, data.Field).Direct {
+				queues = append(queues, data)
+			}
+			_, err = DB.Exec("INSERT INTO datas (id, device_id, field, value_nbr, value_str, value_bool) VALUES ($1, $2, $3, $4, $5, $6)",
+				data.ID, data.DeviceID, data.Field, data.ValueNbr, data.ValueStr, data.ValueBool)
+			if err != nil {
+				logger.WithFields(logger.Fields{"code": "CSDSND003"}).Errorf("%s", err.Error())
+				continue
+			}
+		}
 	}
+}
+
+func searchStringInArray(array []string, str string) bool {
+	for _, arr := range array {
+		if arr == str {
+			return true
+		}
+	}
+	return false
+}
+
+func findDeviceFromID(devices []Device, id string) *Device {
+	for _, device := range devices {
+		if device.PhysicalID == id {
+			return &device
+		}
+	}
+	return nil
 }
 
 // Automations loop on automations to do actions

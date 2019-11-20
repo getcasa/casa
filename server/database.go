@@ -95,6 +95,9 @@ type Device struct {
 	CreatorID    string `db:"creator_id" json:"creatorId"`
 }
 
+// DeviceJSONSelect string to bypass json tag
+const DeviceJSONSelect = "json_build_object('id', id, 'name', name, 'gatewayId', gateway_id, 'icon', icon, 'physicalid', physical_id, 'physicalname', physical_name, 'config', config, 'plugin', plugin, 'roomid', room_id, 'createdat', created_at, 'updatedat', updated_at, 'creatorid', creator_id)"
+
 // Permission structure in database
 type Permission struct {
 	ID        string `db:"id" json:"id"`

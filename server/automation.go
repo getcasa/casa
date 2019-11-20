@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -173,30 +174,52 @@ func DeleteAutomation(c echo.Context) error {
 	})
 }
 
-type automationStruct struct {
-	ID              string
-	HomeID          string `db:"home_id" json:"homeID"`
-	Name            string
-	Trigger         []string
-	TriggerKey      []string
-	TriggerOperator []string
-	TriggerValue    []string
-	Action          []string
-	ActionCall      []string
-	ActionValue     []string
-	Status          bool
-	CreatedAt       string `db:"created_at" json:"createdAt"`
-	CreatorID       string `db:"creator_id" json:"creatorID"`
+type permissionAutomations struct {
 	User            User
+	ID              string   `db:"a_id"`
+	Name            string   `db:"a_name"`
+	HomeID          string   `db:"a_homeid"`
+	Trigger         []string `db:"a_trigger"`
+	TriggerKey      []string `db:"a_triggerkey"`
+	TriggerOperator []string `db:"a_triggeroperator"`
+	TriggerValue    []string `db:"a_triggervalue"`
+	Action          []string `db:"a_action"`
+	ActionCall      []string `db:"a_actioncall"`
+	ActionValue     []string `db:"a_actionvalue"`
+	Status          bool     `db:"a_status"`
+	CreatedAt       string   `db:"a_createdat"`
+	UpdatedAt       string   `db:"a_updatedat"`
+	Triggers        string
+	Actions         string
+}
+
+type automationStruct struct {
+	ID              string   `json:"id"`
+	HomeID          string   `db:"home_id" json:"homeId"`
+	Name            string   `json:"name"`
+	Trigger         []Device `json:"trigger"`
+	TriggerKey      []string `json:"triggerKey"`
+	TriggerOperator []string `json:"triggerOperator"`
+	TriggerValue    []string `json:"triggerValue"`
+	Action          []Device `json:"action"`
+	ActionCall      []string `json:"actionCall"`
+	ActionValue     []string `json:"actionValue"`
+	Status          bool     `json:"status"`
+	CreatedAt       string   `db:"created_at" json:"createdAt"`
+	UpdatedAt       string   `db:"updated_at" json:"updatedAt"`
+	Creator         User     `json:"creator"`
 }
 
 // GetAutomations route get list of user automations
 func GetAutomations(c echo.Context) error {
-	user := c.Get("user").(User)
-
 	rows, err := DB.Queryx(`
-		SELECT * FROM automations
-		WHERE creator_id=$1`, user.ID)
+		SELECT t.*,
+		array(SELECT `+DeviceJSONSelect+` FROM devices WHERE devices.id = ANY(a_trigger)) AS triggers,
+		array(SELECT `+DeviceJSONSelect+` FROM devices WHERE devices.id = ANY(a_action)) AS actions
+		FROM(SELECT users.*, automations.id as a_id,	automations.name AS a_name, automations.home_id AS a_homeid, automations.trigger AS a_trigger, automations.trigger_key AS a_triggerkey, automations.trigger_operator AS a_triggeroperator, automations.trigger_value AS a_triggervalue, automations.action AS a_action, automations.action_call AS a_actioncall, automations.action_value AS a_actionvalue, automations.status AS a_status, automations.created_at AS a_createdat, automations.updated_at AS a_updatedat FROM automations
+		JOIN users ON automations.creator_id = users.id
+		WHERE automations.home_id=$1) AS t
+	`, c.Param("homeId"))
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSAGAS001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
@@ -208,80 +231,99 @@ func GetAutomations(c echo.Context) error {
 	var automations []automationStruct
 	for rows.Next() {
 
-		var auto automationStruct
-		err := rows.Scan(&auto.ID, &auto.HomeID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerKey), pq.Array(&auto.TriggerOperator), pq.Array(&auto.TriggerValue), pq.Array(&auto.Action), pq.Array(&auto.ActionCall), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.CreatorID)
+		var auto permissionAutomations
+		err := rows.Scan(&auto.User.ID, &auto.User.Firstname, &auto.User.Lastname, &auto.User.Email, &auto.User.Password, &auto.User.Birthdate, &auto.User.CreatedAt, &auto.User.UpdatedAt, &auto.ID, &auto.Name, &auto.HomeID, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerKey), pq.Array(&auto.TriggerOperator), pq.Array(&auto.TriggerValue), pq.Array(&auto.Action), pq.Array(&auto.ActionCall), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.UpdatedAt, &auto.Triggers, &auto.Actions)
 		if err != nil {
 			logger.WithFields(logger.Fields{"code": "CSAGAS002"}).Errorf("%s", err.Error())
 			return c.JSON(http.StatusInternalServerError, ErrorResponse{
 				Code:    "CSAGAS002",
-				Message: "Error 3: Can't retrieve automations",
+				Message: "Automations can't be retrieved",
 			})
 		}
+
 		automations = append(automations, automationStruct{
 			ID:              auto.ID,
 			HomeID:          auto.HomeID,
 			Name:            auto.Name,
-			Trigger:         auto.Trigger,
+			Trigger:         deviceJSONToStruct(auto.Triggers),
 			TriggerKey:      auto.TriggerKey,
 			TriggerOperator: auto.TriggerOperator,
 			TriggerValue:    auto.TriggerValue,
-			Action:          auto.Action,
+			Action:          deviceJSONToStruct(auto.Actions),
 			ActionCall:      auto.ActionCall,
 			ActionValue:     auto.ActionValue,
 			Status:          auto.Status,
 			CreatedAt:       auto.CreatedAt,
-			CreatorID:       auto.CreatorID,
-			User:            user,
+			UpdatedAt:       auto.UpdatedAt,
+			Creator:         auto.User,
 		})
 	}
 
-	return c.JSON(http.StatusOK, DataReponse{
-		Data: automations,
-	})
+	return c.JSON(http.StatusOK, automations)
 }
 
 // GetAutomation route get specific automation with id
 func GetAutomation(c echo.Context) error {
-	user := c.Get("user").(User)
-
 	row := DB.QueryRowx(`
-		SELECT * FROM automations
-		WHERE creator_id=$1 AND id=$2`, user.ID, c.Param("automationId"))
-	if row == nil {
-		logger.WithFields(logger.Fields{"code": "CSAGA001"}).Errorf("QueryRowx: Select automations")
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:    "CSAGA001",
-			Message: "Automation can't be found",
-		})
-	}
+	SELECT t.*,
+	array(SELECT `+DeviceJSONSelect+` FROM devices WHERE devices.id = ANY(a_trigger)) AS triggers,
+	array(SELECT `+DeviceJSONSelect+` FROM devices WHERE devices.id = ANY(a_action)) AS actions
+	FROM(SELECT users.*, automations.id as a_id,	automations.name AS a_name, automations.home_id AS a_homeid, automations.trigger AS a_trigger, automations.trigger_key AS a_triggerkey, automations.trigger_operator AS a_triggeroperator, automations.trigger_value AS a_triggervalue, automations.action AS a_action, automations.action_call AS a_actioncall, automations.action_value AS a_actionvalue, automations.status AS a_status, automations.created_at AS a_createdat, automations.updated_at AS a_updatedat FROM automations
+	JOIN users ON automations.creator_id = users.id
+	WHERE automations.home_id=$1 AND automations.id=$2) AS t
+`, c.Param("homeId"), c.Param("automationId"))
 
-	var auto automationStruct
-	err := row.Scan(&auto.ID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerKey), pq.Array(&auto.TriggerOperator), pq.Array(&auto.TriggerValue), pq.Array(&auto.Action), pq.Array(&auto.ActionCall), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.CreatorID, &auto.HomeID)
+	var auto permissionAutomations
+	err := row.Scan(&auto.User.ID, &auto.User.Firstname, &auto.User.Lastname, &auto.User.Email, &auto.User.Password, &auto.User.Birthdate, &auto.User.CreatedAt, &auto.User.UpdatedAt, &auto.ID, &auto.HomeID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerKey), pq.Array(&auto.TriggerOperator), pq.Array(&auto.TriggerValue), pq.Array(&auto.Action), pq.Array(&auto.ActionCall), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.UpdatedAt, &auto.Triggers, &auto.Actions)
 	if err != nil {
-		logger.WithFields(logger.Fields{"code": "CSAGA002"}).Errorf("%s", err.Error())
+		logger.WithFields(logger.Fields{"code": "CSAGA001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Code:    "CSAGA002",
-			Message: "Automation can't be found",
+			Code:    "CSAGAS002",
+			Message: "Automations can't be retrieved",
 		})
 	}
 
-	return c.JSON(http.StatusOK, DataReponse{
-		Data: automationStruct{
-			ID:              auto.ID,
-			HomeID:          auto.HomeID,
-			Name:            auto.Name,
-			Trigger:         auto.Trigger,
-			TriggerKey:      auto.TriggerKey,
-			TriggerOperator: auto.TriggerOperator,
-			TriggerValue:    auto.TriggerValue,
-			Action:          auto.Action,
-			ActionCall:      auto.ActionCall,
-			ActionValue:     auto.ActionValue,
-			Status:          auto.Status,
-			CreatedAt:       auto.CreatedAt,
-			CreatorID:       auto.CreatorID,
-			User:            user,
-		},
-	})
+	auto.Triggers = "[" + auto.Triggers[1:len(auto.Triggers)-1] + "]"
+	var arrayJSON []string
+	err = json.Unmarshal([]byte(auto.Triggers), &arrayJSON)
 
+	var listTrigger []Device
+	for _, elem := range arrayJSON {
+		var trigger Device
+		err = json.Unmarshal([]byte(elem), &trigger)
+		listTrigger = append(listTrigger, trigger)
+	}
+
+	return c.JSON(http.StatusOK, automationStruct{
+		ID:              auto.ID,
+		HomeID:          auto.HomeID,
+		Name:            auto.Name,
+		Trigger:         deviceJSONToStruct(auto.Triggers),
+		TriggerKey:      auto.TriggerKey,
+		TriggerOperator: auto.TriggerOperator,
+		TriggerValue:    auto.TriggerValue,
+		Action:          deviceJSONToStruct(auto.Actions),
+		ActionCall:      auto.ActionCall,
+		ActionValue:     auto.ActionValue,
+		Status:          auto.Status,
+		CreatedAt:       auto.CreatedAt,
+		UpdatedAt:       auto.UpdatedAt,
+		Creator:         auto.User,
+	})
+}
+
+func deviceJSONToStruct(str string) []Device {
+	str = "[" + str[1:len(str)-1] + "]"
+	var arrayJSON []string
+	err := json.Unmarshal([]byte(str), &arrayJSON)
+	fmt.Println(err)
+
+	var listTrigger []Device
+	for _, elem := range arrayJSON {
+		var trigger Device
+		err = json.Unmarshal([]byte(elem), &trigger)
+		listTrigger = append(listTrigger, trigger)
+	}
+
+	return listTrigger
 }
