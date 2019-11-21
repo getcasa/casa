@@ -7,6 +7,7 @@ import (
 
 	"github.com/ItsJimi/casa/logger"
 	"github.com/ItsJimi/casa/utils"
+	"github.com/getcasa/sdk"
 	"github.com/labstack/echo"
 )
 
@@ -182,24 +183,23 @@ type permissionDevice struct {
 }
 
 type deviceRes struct {
-	ID             string `json:"id"`
-	Name           string `json:"name"`
-	Icon           string `json:"icon"`
-	GatewayID      string `json:"gatewayId"`
-	PhysicalID     string `json:"physicalId"`
-	PhysicalName   string `json:"physicalName"`
-	Config         string `json:"config"`
-	Plugin         string `json:"plugin"`
-	RoomID         string `json:"roomId"`
-	CreatedAt      string `json:"createdAt"`
-	UpdatedAt      string `json:"updatedAt"`
-	Creator        User   `json:"creator"`
-	Read           bool   `json:"read"`
-	Write          bool   `json:"write"`
-	Manage         bool   `json:"manage"`
-	Admin          bool   `json:"admin"`
-	DefaultTrigger string `json:"defaultTrigger"`
-	DefaultAction  string `json:"defaultAction"`
+	ID           string     `json:"id"`
+	Name         string     `json:"name"`
+	Icon         string     `json:"icon"`
+	GatewayID    string     `json:"gatewayId"`
+	PhysicalID   string     `json:"physicalId"`
+	PhysicalName string     `json:"physicalName"`
+	Config       string     `json:"config"`
+	Plugin       string     `json:"plugin"`
+	RoomID       string     `json:"roomId"`
+	CreatedAt    string     `json:"createdAt"`
+	UpdatedAt    string     `json:"updatedAt"`
+	Creator      User       `json:"creator"`
+	Read         bool       `json:"read"`
+	Write        bool       `json:"write"`
+	Manage       bool       `json:"manage"`
+	Admin        bool       `json:"admin"`
+	PluginDevice sdk.Device `json:"pluginDevice"`
 }
 
 // GetDevices route get list of user devices
@@ -234,8 +234,7 @@ func GetDevices(c echo.Context) error {
 			})
 		}
 
-		var defaultTrigger string
-		var defaultAction string
+		var pluginDevice sdk.Device
 		for _, config := range Configs {
 			if config.Name != permission.DevicePlugin {
 				continue
@@ -244,28 +243,26 @@ func GetDevices(c echo.Context) error {
 				if device.Name != permission.DevicePhysicalName {
 					continue
 				}
-				defaultTrigger = device.DefaultTrigger
-				defaultAction = device.DefaultAction
+				pluginDevice = device
 			}
 		}
 
 		devices = append(devices, deviceRes{
-			ID:             permission.DeviceID,
-			Name:           permission.DeviceName,
-			Icon:           permission.DeviceIcon,
-			RoomID:         permission.DeviceRoomID,
-			GatewayID:      permission.DeviceGatewayID,
-			PhysicalID:     permission.DevicePhysicalID,
-			PhysicalName:   permission.DevicePhysicalName,
-			Config:         permission.DeviceConfig,
-			CreatedAt:      permission.DeviceCreatedAt,
-			Creator:        permission.User,
-			Read:           permission.Permission.Read,
-			Write:          permission.Permission.Write,
-			Manage:         permission.Permission.Manage,
-			Admin:          permission.Permission.Admin,
-			DefaultTrigger: defaultTrigger,
-			DefaultAction:  defaultAction,
+			ID:           permission.DeviceID,
+			Name:         permission.DeviceName,
+			Icon:         permission.DeviceIcon,
+			RoomID:       permission.DeviceRoomID,
+			GatewayID:    permission.DeviceGatewayID,
+			PhysicalID:   permission.DevicePhysicalID,
+			PhysicalName: permission.DevicePhysicalName,
+			Config:       permission.DeviceConfig,
+			CreatedAt:    permission.DeviceCreatedAt,
+			Creator:      permission.User,
+			Read:         permission.Permission.Read,
+			Write:        permission.Permission.Write,
+			Manage:       permission.Permission.Manage,
+			Admin:        permission.Permission.Admin,
+			PluginDevice: pluginDevice,
 		})
 	}
 
@@ -304,8 +301,7 @@ func GetDevice(c echo.Context) error {
 		})
 	}
 
-	var defaultTrigger string
-	var defaultAction string
+	var pluginDevice sdk.Device
 	for _, config := range Configs {
 		if config.Name != permission.DevicePlugin {
 			continue
@@ -314,27 +310,25 @@ func GetDevice(c echo.Context) error {
 			if device.Name != permission.DevicePhysicalName {
 				continue
 			}
-			defaultTrigger = device.DefaultTrigger
-			defaultAction = device.DefaultAction
+			pluginDevice = device
 		}
 	}
 
 	return c.JSON(http.StatusOK, deviceRes{
-		ID:             permission.DeviceID,
-		Name:           permission.DeviceName,
-		Icon:           permission.DeviceIcon,
-		RoomID:         permission.DeviceRoomID,
-		GatewayID:      permission.DeviceGatewayID,
-		PhysicalID:     permission.DevicePhysicalID,
-		PhysicalName:   permission.DevicePhysicalName,
-		Config:         permission.DeviceConfig,
-		CreatedAt:      permission.DeviceCreatedAt,
-		Creator:        permission.User,
-		Read:           permission.Permission.Read,
-		Write:          permission.Permission.Write,
-		Manage:         permission.Permission.Manage,
-		Admin:          permission.Permission.Admin,
-		DefaultTrigger: defaultTrigger,
-		DefaultAction:  defaultAction,
+		ID:           permission.DeviceID,
+		Name:         permission.DeviceName,
+		Icon:         permission.DeviceIcon,
+		RoomID:       permission.DeviceRoomID,
+		GatewayID:    permission.DeviceGatewayID,
+		PhysicalID:   permission.DevicePhysicalID,
+		PhysicalName: permission.DevicePhysicalName,
+		Config:       permission.DeviceConfig,
+		CreatedAt:    permission.DeviceCreatedAt,
+		Creator:      permission.User,
+		Read:         permission.Permission.Read,
+		Write:        permission.Permission.Write,
+		Manage:       permission.Permission.Manage,
+		Admin:        permission.Permission.Admin,
+		PluginDevice: pluginDevice,
 	})
 }
