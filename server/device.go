@@ -221,7 +221,7 @@ func GetDevices(c echo.Context) error {
 	}
 	defer rows.Close()
 
-	var devices []deviceRes
+	devices := []deviceRes{}
 	for rows.Next() {
 		var permission permissionDevice
 		err := rows.StructScan(&permission)
