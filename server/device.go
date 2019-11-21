@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 	"reflect"
+	"strconv"
 
 	"github.com/ItsJimi/casa/logger"
 	"github.com/ItsJimi/casa/utils"
@@ -268,6 +269,8 @@ func GetDevices(c echo.Context) error {
 		})
 	}
 
+	totalDevices := strconv.Itoa(len(devices))
+	c.Response().Header().Set("Content-Range", "0-"+totalDevices+"/"+totalDevices)
 	return c.JSON(http.StatusOK, devices)
 }
 
