@@ -348,7 +348,11 @@ func AddPlugin(c echo.Context) error {
 		})
 	}
 
-	_, err := DB.Query("INSERT INTO plugins (id, gateway_id, name, config) VALUES (generate_ulid(), $1, $2, $3)", c.Param("gatewayId"), req.Name, req.Config)
+	_, err := DB.Exec(`
+	INSERT INTO plugins (id, gateway_id, name, config)
+	SELECT COALESCE((SELECT id FROM plugins WHERE plugins.gateway_id = $1 AND name = $2), generate_ulid()), $1, $2, $3
+	ON CONFLICT (id) DO
+	UPDATE SET config = $3 WHERE plugins.gateway_id = $1 AND plugins.name = $2`, c.Param("gatewayId"), req.Name, req.Config)
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSGAP003"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
