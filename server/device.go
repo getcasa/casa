@@ -220,7 +220,7 @@ func GetDevices(c echo.Context) error {
 		})
 	}
 
-	var devices []deviceRes
+	devices := []deviceRes{}
 	for rows.Next() {
 		var permission permissionDevice
 		err := rows.StructScan(&permission)
