@@ -165,6 +165,7 @@ func GetHomes(c echo.Context) error {
 			Message: "Homes can't be retrieved",
 		})
 	}
+	defer rows.Close()
 
 	var homes []homeRes
 	for rows.Next() {

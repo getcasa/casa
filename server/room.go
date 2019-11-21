@@ -212,6 +212,7 @@ func GetRooms(c echo.Context) error {
 			Message: "Rooms can't be retrieved",
 		})
 	}
+	defer rows.Close()
 
 	rooms := []roomRes{}
 	for rows.Next() {

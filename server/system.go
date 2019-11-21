@@ -173,6 +173,7 @@ func GetDiscoveredDevices(c echo.Context) error {
 			Message: err.Error(),
 		})
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var device Device
@@ -212,6 +213,7 @@ func SaveNewDatas(datas []Datas) {
 		logger.WithFields(logger.Fields{"code": "CSDSND001"}).Errorf("%s", err.Error())
 		return
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var device Device
@@ -263,6 +265,7 @@ func Automations() {
 
 	for range time.Tick(250 * time.Millisecond) {
 		rows, err := DB.Queryx("SELECT * FROM automations")
+		defer rows.Close()
 		if err == nil {
 			for rows.Next() {
 				var auto Automation
@@ -371,7 +374,7 @@ func Automations() {
 								}
 							}
 						}
-						_, err := DB.Query("INSERT INTO logs (id, type, type_id, value) VALUES (generate_ulid(), $1, $2, $3)", "automation", auto.ID, "")
+						_, err := DB.Exec("INSERT INTO logs (id, type, type_id, value) VALUES (generate_ulid(), $1, $2, $3)", "automation", auto.ID, "")
 						if err != nil {
 							logger.WithFields(logger.Fields{"code": "CSSA003"}).Errorf("%s", err.Error())
 						}

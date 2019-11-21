@@ -227,6 +227,7 @@ func GetAutomations(c echo.Context) error {
 			Message: "Automations can't be retrieved",
 		})
 	}
+	defer rows.Close()
 
 	var automations []automationStruct
 	for rows.Next() {

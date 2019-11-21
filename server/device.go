@@ -219,6 +219,7 @@ func GetDevices(c echo.Context) error {
 			Message: "Devices can't be found",
 		})
 	}
+	defer rows.Close()
 
 	var devices []deviceRes
 	for rows.Next() {

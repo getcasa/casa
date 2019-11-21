@@ -43,6 +43,7 @@ func GetMembers(c echo.Context) error {
 			Message: "Members can't be retrieved",
 		})
 	}
+	defer rows.Close()
 
 	var members []memberRes
 	for rows.Next() {
@@ -239,6 +240,7 @@ func GetRoomMembers(c echo.Context) error {
 			Message: "Members can't be retrieved",
 		})
 	}
+	defer rows.Close()
 
 	var permissions []permissionMember
 	for rows.Next() {
