@@ -263,7 +263,7 @@ func findDeviceFromID(devices []Device, id string) *Device {
 // Automations loop on automations to do actions
 func Automations() {
 
-	for range time.Tick(250 * time.Millisecond) {
+	for range time.Tick(200 * time.Millisecond) {
 		rows, err := DB.Queryx("SELECT * FROM automations")
 		defer rows.Close()
 		if err == nil {
@@ -307,14 +307,23 @@ func Automations() {
 								}
 							case "int":
 								firstchar := string(auto.TriggerValue[i][0])
+								secondchar := string(auto.TriggerValue[i][1])
 								value, err := strconv.ParseFloat(string(auto.TriggerValue[i][1:]), 64)
 								if err == nil {
 									switch firstchar {
 									case ">":
+										if secondchar == "=" && data.ValueNbr >= value {
+											conditions = append(conditions, "1")
+											break
+										}
 										if data.ValueNbr > value {
 											conditions = append(conditions, "1")
 										}
 									case "<":
+										if secondchar == "=" && data.ValueNbr <= value {
+											conditions = append(conditions, "1")
+											break
+										}
 										if data.ValueNbr < value {
 											conditions = append(conditions, "1")
 										}
@@ -322,10 +331,18 @@ func Automations() {
 										if data.ValueNbr == value {
 											conditions = append(conditions, "1")
 										}
+									case "!":
+										if secondchar == "=" && data.ValueNbr != value {
+											conditions = append(conditions, "1")
+										}
 									default:
 									}
 								}
 							case "bool":
+								triggerValueBool, err := strconv.ParseBool(auto.TriggerValue[i])
+								if err == nil && data.ValueBool == triggerValueBool {
+									conditions = append(conditions, "1")
+								}
 							default:
 							}
 						}
