@@ -183,23 +183,24 @@ type permissionDevice struct {
 }
 
 type deviceRes struct {
-	ID           string     `json:"id"`
-	Name         string     `json:"name"`
-	Icon         string     `json:"icon"`
-	GatewayID    string     `json:"gatewayId"`
-	PhysicalID   string     `json:"physicalId"`
-	PhysicalName string     `json:"physicalName"`
-	Config       string     `json:"config"`
-	Plugin       string     `json:"plugin"`
-	RoomID       string     `json:"roomId"`
-	CreatedAt    string     `json:"createdAt"`
-	UpdatedAt    string     `json:"updatedAt"`
-	Creator      User       `json:"creator"`
-	Read         bool       `json:"read"`
-	Write        bool       `json:"write"`
-	Manage       bool       `json:"manage"`
-	Admin        bool       `json:"admin"`
-	PluginDevice sdk.Device `json:"pluginDevice"`
+	ID            string       `json:"id"`
+	Name          string       `json:"name"`
+	Icon          string       `json:"icon"`
+	GatewayID     string       `json:"gatewayId"`
+	PhysicalID    string       `json:"physicalId"`
+	PhysicalName  string       `json:"physicalName"`
+	Config        string       `json:"config"`
+	Plugin        string       `json:"plugin"`
+	RoomID        string       `json:"roomId"`
+	CreatedAt     string       `json:"createdAt"`
+	UpdatedAt     string       `json:"updatedAt"`
+	Creator       User         `json:"creator"`
+	Read          bool         `json:"read"`
+	Write         bool         `json:"write"`
+	Manage        bool         `json:"manage"`
+	Admin         bool         `json:"admin"`
+	PluginDevice  sdk.Device   `json:"pluginDevice"`
+	PluginActions []sdk.Action `json:"pluginActions"`
 }
 
 // GetDevices route get list of user devices
@@ -235,6 +236,7 @@ func GetDevices(c echo.Context) error {
 		}
 
 		var pluginDevice sdk.Device
+		pluginActions := []sdk.Action{}
 		for _, config := range Configs {
 			if config.Name != permission.DevicePlugin {
 				continue
@@ -244,25 +246,34 @@ func GetDevices(c echo.Context) error {
 					continue
 				}
 				pluginDevice = device
+				for _, availableAction := range device.Actions {
+					for _, action := range config.Actions {
+						if action.Name != availableAction {
+							continue
+						}
+						pluginActions = append(pluginActions, action)
+					}
+				}
 			}
 		}
 
 		devices = append(devices, deviceRes{
-			ID:           permission.DeviceID,
-			Name:         permission.DeviceName,
-			Icon:         permission.DeviceIcon,
-			RoomID:       permission.DeviceRoomID,
-			GatewayID:    permission.DeviceGatewayID,
-			PhysicalID:   permission.DevicePhysicalID,
-			PhysicalName: permission.DevicePhysicalName,
-			Config:       permission.DeviceConfig,
-			CreatedAt:    permission.DeviceCreatedAt,
-			Creator:      permission.User,
-			Read:         permission.Permission.Read,
-			Write:        permission.Permission.Write,
-			Manage:       permission.Permission.Manage,
-			Admin:        permission.Permission.Admin,
-			PluginDevice: pluginDevice,
+			ID:            permission.DeviceID,
+			Name:          permission.DeviceName,
+			Icon:          permission.DeviceIcon,
+			RoomID:        permission.DeviceRoomID,
+			GatewayID:     permission.DeviceGatewayID,
+			PhysicalID:    permission.DevicePhysicalID,
+			PhysicalName:  permission.DevicePhysicalName,
+			Config:        permission.DeviceConfig,
+			CreatedAt:     permission.DeviceCreatedAt,
+			Creator:       permission.User,
+			Read:          permission.Permission.Read,
+			Write:         permission.Permission.Write,
+			Manage:        permission.Permission.Manage,
+			Admin:         permission.Permission.Admin,
+			PluginDevice:  pluginDevice,
+			PluginActions: pluginActions,
 		})
 	}
 
@@ -302,6 +313,7 @@ func GetDevice(c echo.Context) error {
 	}
 
 	var pluginDevice sdk.Device
+	pluginActions := []sdk.Action{}
 	for _, config := range Configs {
 		if config.Name != permission.DevicePlugin {
 			continue
@@ -311,24 +323,33 @@ func GetDevice(c echo.Context) error {
 				continue
 			}
 			pluginDevice = device
+			for _, availableAction := range device.Actions {
+				for _, action := range config.Actions {
+					if action.Name != availableAction {
+						continue
+					}
+					pluginActions = append(pluginActions, action)
+				}
+			}
 		}
 	}
 
 	return c.JSON(http.StatusOK, deviceRes{
-		ID:           permission.DeviceID,
-		Name:         permission.DeviceName,
-		Icon:         permission.DeviceIcon,
-		RoomID:       permission.DeviceRoomID,
-		GatewayID:    permission.DeviceGatewayID,
-		PhysicalID:   permission.DevicePhysicalID,
-		PhysicalName: permission.DevicePhysicalName,
-		Config:       permission.DeviceConfig,
-		CreatedAt:    permission.DeviceCreatedAt,
-		Creator:      permission.User,
-		Read:         permission.Permission.Read,
-		Write:        permission.Permission.Write,
-		Manage:       permission.Permission.Manage,
-		Admin:        permission.Permission.Admin,
-		PluginDevice: pluginDevice,
+		ID:            permission.DeviceID,
+		Name:          permission.DeviceName,
+		Icon:          permission.DeviceIcon,
+		RoomID:        permission.DeviceRoomID,
+		GatewayID:     permission.DeviceGatewayID,
+		PhysicalID:    permission.DevicePhysicalID,
+		PhysicalName:  permission.DevicePhysicalName,
+		Config:        permission.DeviceConfig,
+		CreatedAt:     permission.DeviceCreatedAt,
+		Creator:       permission.User,
+		Read:          permission.Permission.Read,
+		Write:         permission.Permission.Write,
+		Manage:        permission.Permission.Manage,
+		Admin:         permission.Permission.Admin,
+		PluginDevice:  pluginDevice,
+		PluginActions: pluginActions,
 	})
 }
