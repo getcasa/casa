@@ -260,143 +260,166 @@ func findDeviceFromID(devices []Device, id string) *Device {
 	return nil
 }
 
+type automationState struct {
+	ID     string
+	Active bool
+}
+
+var listAutomations []automationState
+
 // Automations loop on automations to do actions
 func Automations() {
-
 	for range time.Tick(200 * time.Millisecond) {
 		rows, err := DB.Queryx("SELECT * FROM automations")
 		defer rows.Close()
-		if err == nil {
-			for rows.Next() {
-				var auto Automation
-				err := rows.Scan(&auto.ID, &auto.HomeID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerKey), pq.Array(&auto.TriggerValue), pq.Array(&auto.TriggerOperator), pq.Array(&auto.Action), pq.Array(&auto.ActionCall), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.UpdatedAt, &auto.CreatorID)
-				if err == nil {
-					var conditions []string
+		if err != nil {
+			continue
+		}
+		for rows.Next() {
+			var auto Automation
+			err := rows.Scan(&auto.ID, &auto.HomeID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerKey), pq.Array(&auto.TriggerValue), pq.Array(&auto.TriggerOperator), pq.Array(&auto.Action), pq.Array(&auto.ActionCall), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.UpdatedAt, &auto.CreatorID)
+			if err != nil {
+				continue
+			}
+			if findAutomationFromID(listAutomations, auto.ID) == -1 {
+				listAutomations = append(listAutomations, automationState{
+					ID:     auto.ID,
+					Active: false,
+				})
+			}
+			var conditions []string
 
-					for i := 0; i < len(auto.Trigger); i++ {
-						var device Device
-						err = DB.Get(&device, `SELECT * FROM devices WHERE id = $1`, auto.Trigger[i])
-						field := FindFieldFromName(sdk.FindDevicesFromName(configFromPlugin(Configs, device.Plugin).Devices, device.PhysicalName).Triggers, auto.TriggerKey[i])
+			for i := 0; i < len(auto.Trigger); i++ {
+				var device Device
+				err = DB.Get(&device, `SELECT * FROM devices WHERE id = $1`, auto.Trigger[i])
+				field := FindFieldFromName(sdk.FindDevicesFromName(configFromPlugin(Configs, device.Plugin).Devices, device.PhysicalName).Triggers, auto.TriggerKey[i])
 
-						if field.Direct {
-							queue := FindDataFromID(queues, device.ID)
-							if queue.DeviceID == device.ID {
-								switch field.Type {
-								case "string":
-									if queue.ValueStr == auto.TriggerValue[i] {
-										conditions = append(conditions, "1")
-									}
-								case "int":
-									triggerValue, err := strconv.ParseFloat(string(auto.TriggerValue[i]), 64)
-									if err == nil {
-										if queue.ValueNbr == triggerValue {
-											conditions = append(conditions, "1")
-										}
-									}
-								case "bool":
-								default:
-								}
+				if field.Direct {
+					queue := FindDataFromID(queues, device.ID)
+					if queue.DeviceID == device.ID {
+						switch field.Type {
+						case "string":
+							if queue.ValueStr == auto.TriggerValue[i] {
+								conditions = append(conditions, "1")
 							}
-						} else if device.ID == auto.Trigger[i] {
-							var data Datas
-							err = DB.Get(&data, `SELECT * FROM datas WHERE device_id = $1 AND field = $2 ORDER BY created_at DESC`, device.ID, auto.TriggerKey[i])
-							switch field.Type {
-							case "string":
-								if data.ValueStr == auto.TriggerValue[i] {
+						case "int":
+							triggerValue, err := strconv.ParseFloat(string(auto.TriggerValue[i]), 64)
+							if err == nil {
+								if queue.ValueNbr == triggerValue {
 									conditions = append(conditions, "1")
 								}
-							case "int":
-								firstchar := string(auto.TriggerValue[i][0])
-								secondchar := string(auto.TriggerValue[i][1])
-								value, err := strconv.ParseFloat(string(auto.TriggerValue[i][1:]), 64)
-								if err == nil {
-									switch firstchar {
-									case ">":
-										if secondchar == "=" && data.ValueNbr >= value {
-											conditions = append(conditions, "1")
-											break
-										}
-										if data.ValueNbr > value {
-											conditions = append(conditions, "1")
-										}
-									case "<":
-										if secondchar == "=" && data.ValueNbr <= value {
-											conditions = append(conditions, "1")
-											break
-										}
-										if data.ValueNbr < value {
-											conditions = append(conditions, "1")
-										}
-									case "=":
-										if data.ValueNbr == value {
-											conditions = append(conditions, "1")
-										}
-									case "!":
-										if secondchar == "=" && data.ValueNbr != value {
-											conditions = append(conditions, "1")
-										}
-									default:
-									}
+							}
+						case "bool":
+						default:
+						}
+					}
+				} else if device.ID == auto.Trigger[i] {
+					var data Datas
+					err = DB.Get(&data, `SELECT * FROM datas WHERE device_id = $1 AND field = $2 ORDER BY created_at DESC`, device.ID, auto.TriggerKey[i])
+					switch field.Type {
+					case "string":
+						if data.ValueStr == auto.TriggerValue[i] {
+							conditions = append(conditions, "1")
+						}
+					case "int":
+						firstchar := string(auto.TriggerValue[i][0])
+						secondchar := string(auto.TriggerValue[i][1])
+						value, err := strconv.ParseFloat(string(auto.TriggerValue[i][1:]), 64)
+						if err == nil {
+							switch firstchar {
+							case ">":
+								if secondchar == "=" && data.ValueNbr >= value {
+									conditions = append(conditions, "1")
+									break
 								}
-							case "bool":
-								triggerValueBool, err := strconv.ParseBool(auto.TriggerValue[i])
-								if err == nil && data.ValueBool == triggerValueBool {
+								if data.ValueNbr > value {
+									conditions = append(conditions, "1")
+								}
+							case "<":
+								if secondchar == "=" && data.ValueNbr <= value {
+									conditions = append(conditions, "1")
+									break
+								}
+								if data.ValueNbr < value {
+									conditions = append(conditions, "1")
+								}
+							case "=":
+								if data.ValueNbr == value {
+									conditions = append(conditions, "1")
+								}
+							case "!":
+								if secondchar == "=" && data.ValueNbr != value {
 									conditions = append(conditions, "1")
 								}
 							default:
 							}
 						}
-						if len(conditions) == 0 {
-							conditions = append(conditions, "0")
+					case "bool":
+						triggerValueBool, err := strconv.ParseBool(auto.TriggerValue[i])
+						if err == nil && data.ValueBool == triggerValueBool {
+							conditions = append(conditions, "1")
 						}
-						if conditions[len(conditions)-1] != "0" && conditions[len(conditions)-1] != "1" {
-							conditions = append(conditions, "0")
-						}
-						if len(auto.TriggerOperator) >= 1 && len(auto.TriggerOperator) > i {
-							conditions = append(conditions, auto.TriggerOperator[i])
-						}
-					}
-
-					if checkConditionOperator(conditions) {
-						for i := 0; i < len(auto.Action); i++ {
-							var device Device
-							err = DB.Get(&device, `SELECT * FROM devices WHERE id = $1`, auto.Action[i])
-							if err == nil {
-
-								act := ActionMessage{
-									PhysicalID: device.PhysicalID,
-									Plugin:     device.Plugin,
-									Call:       auto.ActionCall[i],
-									Config:     device.Config,
-									Params:     auto.ActionValue[i],
-								}
-
-								marshAct, _ := json.Marshal(act)
-
-								message := WebsocketMessage{
-									Action: "callAction",
-									Body:   marshAct,
-								}
-
-								marshMessage, _ := json.Marshal(message)
-								if err != nil {
-									logger.WithFields(logger.Fields{"code": "CSSA001"}).Errorf("%s", err.Error())
-									break
-								}
-								logger.WithFields(logger.Fields{}).Debugf("Action sent to gateway")
-								err = WSConn.WriteMessage(websocket.TextMessage, marshMessage)
-								if err != nil {
-									logger.WithFields(logger.Fields{"code": "CSSA002"}).Errorf("%s", err.Error())
-									continue
-								}
-							}
-						}
-						_, err := DB.Exec("INSERT INTO logs (id, type, type_id, value) VALUES (generate_ulid(), $1, $2, $3)", "automation", auto.ID, "")
-						if err != nil {
-							logger.WithFields(logger.Fields{"code": "CSSA003"}).Errorf("%s", err.Error())
-						}
+					default:
 					}
 				}
+				if len(conditions) == 0 {
+					conditions = append(conditions, "0")
+				}
+				if conditions[len(conditions)-1] != "0" && conditions[len(conditions)-1] != "1" {
+					conditions = append(conditions, "0")
+				}
+				if len(auto.TriggerOperator) >= 1 && len(auto.TriggerOperator) > i {
+					conditions = append(conditions, auto.TriggerOperator[i])
+				}
+			}
+
+			stateAuto := findAutomationFromID(listAutomations, auto.ID)
+			if !checkConditionOperator(conditions) {
+				listAutomations[stateAuto].Active = false
+				continue
+			}
+			if stateAuto != -1 && listAutomations[stateAuto].Active {
+				continue
+			}
+
+			for i := 0; i < len(auto.Action); i++ {
+				var device Device
+				err = DB.Get(&device, `SELECT * FROM devices WHERE id = $1`, auto.Action[i])
+				if err == nil {
+
+					act := ActionMessage{
+						PhysicalID: device.PhysicalID,
+						Plugin:     device.Plugin,
+						Call:       auto.ActionCall[i],
+						Config:     device.Config,
+						Params:     auto.ActionValue[i],
+					}
+
+					marshAct, _ := json.Marshal(act)
+
+					message := WebsocketMessage{
+						Action: "callAction",
+						Body:   marshAct,
+					}
+
+					listAutomations[stateAuto].Active = true
+
+					marshMessage, _ := json.Marshal(message)
+					if err != nil {
+						logger.WithFields(logger.Fields{"code": "CSSA001"}).Errorf("%s", err.Error())
+						break
+					}
+					logger.WithFields(logger.Fields{}).Debugf("Action sent to gateway")
+					err = WSConn.WriteMessage(websocket.TextMessage, marshMessage)
+					if err != nil {
+						logger.WithFields(logger.Fields{"code": "CSSA002"}).Errorf("%s", err.Error())
+						continue
+					}
+				}
+			}
+			_, err = DB.Exec("INSERT INTO logs (id, type, type_id, value) VALUES (generate_ulid(), $1, $2, $3)", "automation", auto.ID, "")
+			if err != nil {
+				logger.WithFields(logger.Fields{"code": "CSSA003"}).Errorf("%s", err.Error())
 			}
 		}
 		queues = nil
@@ -442,8 +465,15 @@ func configFromPlugin(configurations []sdk.Configuration, name string) sdk.Confi
 	return sdk.Configuration{}
 }
 
-// 	return nil
-// }
+// FindAutomationFromID find automation with ID
+func findAutomationFromID(automations []automationState, ID string) int {
+	for ind, auto := range automations {
+		if auto.ID == ID {
+			return ind
+		}
+	}
+	return -1
+}
 
 // FindDataFromID find data with name ID
 func FindDataFromID(datas []Datas, ID string) Datas {
