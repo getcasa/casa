@@ -229,7 +229,7 @@ func GetAutomations(c echo.Context) error {
 	}
 	defer rows.Close()
 
-	var automations []automationStruct
+	automations := []automationStruct{}
 	for rows.Next() {
 
 		var auto permissionAutomations
