@@ -375,7 +375,7 @@ func GetPlugin(c echo.Context) error {
 	 `, c.Param("gatewayId"), c.Param("pluginName")).StructScan(&plugin)
 
 	if err != nil {
-		logger.WithFields(logger.Fields{"code": "CSSGGP001"}).Errorf("QueryRowx: Select plugin")
+		logger.WithFields(logger.Fields{"code": "CSSGGP001"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusNotFound, ErrorResponse{
 			Code:    "CSSGGP001",
 			Message: "Plugin not found",
