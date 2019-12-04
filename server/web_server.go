@@ -133,6 +133,12 @@ func Start(port string) {
 	v1.GET("/homes/:homeId/rooms/:roomId/devices/:deviceId", GetDevice, func(next echo.HandlerFunc) echo.HandlerFunc {
 		return hasPermission(next, "device", true, false, false, false)
 	})
+	v1.GET("/homes/:homeId/rooms/:roomId/devices/:deviceId/logs", GetLogsDevice, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "device", true, false, false, false)
+	})
+	v1.GET("/homes/:homeId/rooms/:roomId/devices/:deviceId/datas", GetDatasDevice, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "device", true, false, false, false)
+	})
 	v1.POST("/homes/:homeId/rooms/:roomId/devices/:deviceId/actions", CallAction, func(next echo.HandlerFunc) echo.HandlerFunc {
 		return hasPermission(next, "device", false, true, false, false)
 	})
@@ -141,7 +147,6 @@ func Start(port string) {
 	v1.POST("/homes/:homeId/automations", AddAutomation, func(next echo.HandlerFunc) echo.HandlerFunc {
 		return hasPermission(next, "home", false, true, false, false)
 	})
-	// TODO: Do Update
 	v1.PUT("/homes/:homeId/automations/:automationId", UpdateAutomation, func(next echo.HandlerFunc) echo.HandlerFunc {
 		return hasPermission(next, "home", false, true, false, false)
 	})
@@ -152,6 +157,9 @@ func Start(port string) {
 		return hasPermission(next, "home", true, false, false, false)
 	})
 	v1.GET("/homes/:homeId/automations/:automationId", GetAutomation, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "home", true, false, false, false)
+	})
+	v1.GET("/homes/:homeId/automations/:automationId/logs", GetLogsAutomation, func(next echo.HandlerFunc) echo.HandlerFunc {
 		return hasPermission(next, "home", true, false, false, false)
 	})
 

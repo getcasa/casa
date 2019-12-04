@@ -22,6 +22,10 @@ type addDeviceReq struct {
 	Icon         string
 }
 
+type getDatasDeviceReq struct {
+	Field string
+}
+
 // AddDevice route create a device
 func AddDevice(c echo.Context) error {
 	req := new(addDeviceReq)
@@ -352,4 +356,95 @@ func GetDevice(c echo.Context) error {
 		PluginDevice:  pluginDevice,
 		PluginActions: pluginActions,
 	})
+}
+
+// GetLogsDevice return list of log for a device
+func GetLogsDevice(c echo.Context) error {
+	rows, err := DB.Queryx(`
+	SELECT logs.* FROM logs
+	JOIN devices ON logs.type_id = devices.id
+	JOIN rooms ON devices.room_id = rooms.id
+	WHERE rooms.home_id = $1 AND devices.room_id=$2 AND type_id=$3 AND type = 'device'
+	ORDER BY created_at DESC
+	`, c.Param("homeId"), c.Param("roomId"), c.Param("deviceId"))
+	if err != nil {
+		logger.WithFields(logger.Fields{"code": "CSDGLD002"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:    "CSDGLD002",
+			Message: "Logs can't be found",
+		})
+	}
+
+	defer rows.Close()
+
+	logs := []Logs{}
+	for rows.Next() {
+		var log Logs
+		err := rows.StructScan(&log)
+		if err != nil {
+			logger.WithFields(logger.Fields{"code": "CSDGLD003"}).Errorf("%s", err.Error())
+			return c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Code:    "CSDGLD003",
+				Message: "Logs can't be found",
+			})
+		}
+
+		logs = append(logs, log)
+	}
+
+	return c.JSON(http.StatusOK, logs)
+}
+
+// GetDatasDevice return list of datas for a device
+func GetDatasDevice(c echo.Context) error {
+	req := new(getDatasDeviceReq)
+	if err := c.Bind(req); err != nil {
+		logger.WithFields(logger.Fields{"code": "CSAGLA001"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:    "CSAGLA001",
+			Message: "Wrong parameters",
+		})
+	}
+
+	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Field"}); err != nil {
+		logger.WithFields(logger.Fields{"code": "CSAGLA002"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:    "CSAGLA002",
+			Message: err.Error(),
+		})
+	}
+
+	rows, err := DB.Queryx(`
+	SELECT datas.* FROM datas
+	JOIN devices ON datas.device_id = devices.id
+	JOIN rooms ON devices.room_id = rooms.id
+	WHERE rooms.home_id = $1 AND devices.room_id=$2 AND device_id=$3 AND field = $4
+	ORDER BY created_at DESC
+	`, c.Param("homeId"), c.Param("roomId"), c.Param("deviceId"), req.Field)
+	if err != nil {
+		logger.WithFields(logger.Fields{"code": "CSDGLD003"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:    "CSDGLD003",
+			Message: "Datas can't be found",
+		})
+	}
+
+	defer rows.Close()
+
+	datas := []Datas{}
+	for rows.Next() {
+		var data Datas
+		err := rows.StructScan(&data)
+		if err != nil {
+			logger.WithFields(logger.Fields{"code": "CSDGLD004"}).Errorf("%s", err.Error())
+			return c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Code:    "CSDGLD004",
+				Message: "Datas can't be found",
+			})
+		}
+
+		datas = append(datas, data)
+	}
+
+	return c.JSON(http.StatusOK, datas)
 }

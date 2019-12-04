@@ -302,6 +302,42 @@ func GetAutomation(c echo.Context) error {
 	})
 }
 
+// GetLogsAutomation return list of log for an automation
+func GetLogsAutomation(c echo.Context) error {
+	rows, err := DB.Queryx(`
+	SELECT logs.* FROM logs
+	JOIN automations ON logs.type_id = automations.id
+	WHERE automations.home_id=$1 AND type_id=$2 AND type = 'automation'
+	ORDER BY created_at DESC
+	`, c.Param("homeId"), c.Param("automationId"))
+	if err != nil {
+		logger.WithFields(logger.Fields{"code": "CSAGLA002"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:    "CSAGLA002",
+			Message: "Logs can't be found",
+		})
+	}
+
+	defer rows.Close()
+
+	logs := []Logs{}
+	for rows.Next() {
+		var log Logs
+		err := rows.StructScan(&log)
+		if err != nil {
+			logger.WithFields(logger.Fields{"code": "CSAGLA003"}).Errorf("%s", err.Error())
+			return c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Code:    "CSAGLA003",
+				Message: "Logs can't be found",
+			})
+		}
+
+		logs = append(logs, log)
+	}
+
+	return c.JSON(http.StatusOK, logs)
+}
+
 func deviceJSONToStruct(str string) []Device {
 	str = "[" + str[1:len(str)-1] + "]"
 	var arrayJSON []string
