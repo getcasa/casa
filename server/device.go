@@ -111,8 +111,12 @@ func UpdateDevice(c echo.Context) error {
 		})
 	}
 
-	request := "UPDATE devices SET name = COALESCE($1, name), room_id = COALESCE($2, room_id) WHERE id = $3"
-	_, err := DB.Exec(request, utils.NewNullString(req.Name), utils.NewNullString(req.RoomID), c.Param("deviceId"))
+	request := `UPDATE devices SET
+	name = COALESCE($1, name),
+	room_id = COALESCE($2, room_id),
+	icon = COALESCE($3, icon)
+	WHERE id = $4 RETURNING *`
+	rows, err := DB.Queryx(request, utils.NewNullString(req.Name), utils.NewNullString(req.RoomID), utils.NewNullString(req.Icon), c.Param("deviceId"))
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSDUD005"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
@@ -121,9 +125,20 @@ func UpdateDevice(c echo.Context) error {
 		})
 	}
 
-	return c.JSON(http.StatusOK, MessageResponse{
-		Message: "Device updated",
-	})
+	defer rows.Close()
+
+	rows.Next()
+	var device Device
+	err = rows.StructScan(&device)
+	if err != nil {
+		logger.WithFields(logger.Fields{"code": "CSDUD006"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:    "CSDUD006",
+			Message: "Device can't be updated",
+		})
+	}
+
+	return c.JSON(http.StatusOK, device)
 }
 
 // DeleteDevice route delete device
