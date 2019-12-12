@@ -143,6 +143,14 @@ func Start(port string) {
 		return hasPermission(next, "device", false, true, false, false)
 	})
 
+	// Devices Members
+	v1.GET("/homes/:homeId/rooms/:roomId/devices/:deviceId/members", GetDeviceMembers, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "device", true, false, false, false)
+	})
+	v1.PUT("/homes/:homeId/rooms/:roomId/devices/:deviceId/members/:userId", EditDeviceMember, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return hasPermission(next, "device", false, false, false, true)
+	})
+
 	// Automations
 	v1.POST("/homes/:homeId/automations", AddAutomation, func(next echo.HandlerFunc) echo.HandlerFunc {
 		return hasPermission(next, "home", false, true, false, false)

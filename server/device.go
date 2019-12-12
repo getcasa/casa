@@ -463,3 +463,131 @@ func GetDatasDevice(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, datas)
 }
+
+// GetDeviceMembers route get list of device users
+func GetDeviceMembers(c echo.Context) error {
+	rows, err := DB.Queryx(`
+		SELECT * FROM permissions
+		JOIN users ON permissions.user_id = users.id
+		WHERE (permissions.type=$1 AND permissions.type_id=$2) OR (permissions.type=$3 AND permissions.type_id=$4)
+	`, "room", c.Param("roomId"), "device", c.Param("deviceId"))
+	if err != nil {
+		logger.WithFields(logger.Fields{"code": "CSDGDM001"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:    "CSDGDM001",
+			Message: "Members can't be retrieved",
+		})
+	}
+	defer rows.Close()
+
+	var permissions []permissionDevice
+	for rows.Next() {
+		var permission permissionDevice
+		err := rows.StructScan(&permission)
+		if err != nil {
+			logger.WithFields(logger.Fields{"code": "CSDGDM002"}).Errorf("%s", err.Error())
+			return c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Code:    "CSDGDM002",
+				Message: "Members can't be retrieved",
+			})
+		}
+
+		permissions = append(permissions, permission)
+	}
+
+	var members []memberRes
+	for _, permission := range permissions {
+		if permission.Permission.Type == "device" {
+			continue
+		}
+
+		member := memberRes{
+			ID:        permission.User.ID,
+			Firstname: permission.User.Firstname,
+			Lastname:  permission.User.Lastname,
+			Email:     permission.User.Email,
+			Birthdate: permission.User.Birthdate,
+			CreatedAt: permission.User.CreatedAt,
+			Read:      false,
+			Write:     false,
+			Manage:    false,
+			Admin:     false,
+		}
+
+		for _, _permission := range permissions {
+			if _permission.Permission.Type == "device" && permission.Permission.UserID == _permission.Permission.UserID {
+				member.Read = _permission.Permission.Read
+				member.Write = _permission.Permission.Write
+				member.Manage = _permission.Permission.Manage
+				member.Admin = _permission.Permission.Admin
+				break
+			}
+		}
+		members = append(members, member)
+	}
+
+	totalMembers := strconv.Itoa(len(members))
+	c.Response().Header().Set("Content-Range", "0-"+totalMembers+"/"+totalMembers)
+	return c.JSON(http.StatusOK, members)
+}
+
+// EditDeviceMember route create a new permission to authorize an useron a device
+func EditDeviceMember(c echo.Context) error {
+	req := new(editMemberReq)
+	if err := c.Bind(req); err != nil {
+		logger.WithFields(logger.Fields{"code": "CSDEDM001"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:    "CSDEDM001",
+			Message: "Wrong parameters",
+		})
+	}
+
+	if err := utils.MissingFields(c, reflect.ValueOf(req).Elem(), []string{"Read", "Write", "Manage", "Admin"}); err != nil {
+		logger.WithFields(logger.Fields{"code": "CSDEDM002"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:    "CSDEDM002",
+			Message: err.Error(),
+		})
+	}
+
+	var permission Permission
+	err := DB.QueryRowx(`
+		SELECT * FROM permissions
+		WHERE user_id=$1 AND type=$2 AND type_id=$3
+	 `, c.Param("userId"), "device", c.Param("deviceId")).StructScan(&permission)
+
+	if err != nil {
+		_, err = DB.Exec(`
+			INSERT INTO permissions (id, user_id, type, type_id, read, write, manage, admin) 
+			VALUES (generate_ulid(), $1, $2, $3, $4, $5, $6, $7)
+		`, c.Param("userId"), "device", c.Param("deviceId"), req.Read, req.Write, req.Manage, req.Admin)
+		if err != nil {
+			logger.WithFields(logger.Fields{"code": "CSDEDM003"}).Errorf("%s", err.Error())
+			return c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Code:    "CSDEDM003",
+				Message: "Member can't be updated",
+			})
+		}
+
+		return c.JSON(http.StatusOK, MessageResponse{
+			Message: "Member has been updated",
+		})
+	}
+
+	_, err = DB.Exec(`
+		UPDATE permissions
+		SET read=$1, write=$2, manage=$3, admin=$4
+		WHERE user_id=$5 AND type=$6 AND type_id=$7
+	`, req.Read, req.Write, req.Manage, req.Admin, c.Param("userId"), "device", c.Param("deviceId"))
+	if err != nil {
+		logger.WithFields(logger.Fields{"code": "CSDEDM004"}).Errorf("%s", err.Error())
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:    "CSDEDM004",
+			Message: "Member can't be updated",
+		})
+	}
+
+	return c.JSON(http.StatusOK, MessageResponse{
+		Message: "Member has been updated",
+	})
+}
