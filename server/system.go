@@ -33,8 +33,11 @@ type ActionMessage struct {
 // GatewayAddr define the gateway connected
 var GatewayAddr string
 
-// WSConn define the websocket connected between casa server and gateway
-var WSConn *websocket.Conn
+// GatewayConn define the websocket connected between casa server and gateway
+var GatewayConn *websocket.Conn
+
+// ClientsConn define array of websocket client connextion
+var ClientsConn []*websocket.Conn
 var queues []Datas
 
 // Configs define plugins configuration
@@ -45,29 +48,52 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-// InitConnection create websocket connection
-func InitConnection(con echo.Context) error {
+// InitGatewayConnection create websocket connection
+func InitGatewayConnection(con echo.Context) error {
 	var err error
-	WSConn, err = upgrader.Upgrade(con.Response(), con.Request(), nil) // error ignored for sake of simplicity
+	GatewayConn, err = upgrader.Upgrade(con.Response(), con.Request(), nil)
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSDIC001"}).Errorf("%s", err.Error())
 		return err
 	}
-	defer WSConn.Close()
 
+	go GatewayReader(GatewayConn)
+
+	return nil
+}
+
+// InitClientConnection create websocket connection
+func InitClientConnection(con echo.Context) error {
+	wsConn, err := upgrader.Upgrade(con.Response(), con.Request(), nil)
+	if err != nil {
+		logger.WithFields(logger.Fields{"code": "CSDIC001"}).Errorf("%s", err.Error())
+		return err
+	}
+
+	ClientsConn = append(ClientsConn, wsConn)
+
+	go ClientReader(wsConn)
+
+	return nil
+}
+
+// GatewayReader receive and read message in WS connection
+func GatewayReader(WSConn *websocket.Conn) {
 	for {
 		var wm WebsocketMessage
 
 		_, message, err := WSConn.ReadMessage()
 		if err != nil {
-			logger.WithFields(logger.Fields{"code": "CSDIC002"}).Errorf("%s", err.Error())
+			logger.WithFields(logger.Fields{"code": "CSDGR001"}).Errorf("%s", err.Error())
 			continue
 		}
 		err = json.Unmarshal(message, &wm)
 		if err != nil {
-			logger.WithFields(logger.Fields{"code": "CSDIC003"}).Errorf("%s", err.Error())
+			logger.WithFields(logger.Fields{"code": "CSDGR002"}).Errorf("%s", err.Error())
 			continue
 		}
+
+		logger.WithFields(logger.Fields{}).Debugf("recv: %s", message)
 
 		switch wm.Action {
 		case "newConnection":
@@ -82,9 +108,70 @@ func InitConnection(con echo.Context) error {
 		default:
 			continue
 		}
+	}
+}
+
+// ClientReader receive and read message in WS connection
+func ClientReader(WSConn *websocket.Conn) {
+	for {
+		var wm WebsocketMessage
+
+		_, message, err := WSConn.ReadMessage()
+		if err != nil {
+			logger.WithFields(logger.Fields{"code": "CSDCR001"}).Errorf("%s", err.Error())
+			continue
+		}
+		err = json.Unmarshal(message, &wm)
+		if err != nil {
+			logger.WithFields(logger.Fields{"code": "CSDCR002"}).Errorf("%s", err.Error())
+			continue
+		}
 
 		logger.WithFields(logger.Fields{}).Debugf("recv: %s", message)
+
+		switch wm.Action {
+		case "getLog":
+			var deviceID = wm.Body
+			var data Datas
+			err := DB.Get(&data, "SELECT * FROM datas WHERE device_id=$1", deviceID)
+			if err != nil {
+				logger.WithFields(logger.Fields{"code": "CSDCR003"}).Errorf("%s", err.Error())
+				continue
+			}
+
+			marshalData, _ := json.Marshal(data)
+
+			message := WebsocketMessage{
+				Action: "getLog",
+				Body:   marshalData,
+			}
+
+			marshMessage, _ := json.Marshal(message)
+			if err != nil {
+				logger.WithFields(logger.Fields{"code": "CSDGR004"}).Errorf("%s", err.Error())
+				break
+			}
+			logger.WithFields(logger.Fields{}).Debugf("Data sent to app")
+			err = WebsocketWriteMessage(WSConn, marshMessage)
+			if err != nil {
+				logger.WithFields(logger.Fields{"code": "CSDGR005"}).Errorf("%s", err.Error())
+				continue
+			}
+
+		default:
+			continue
+		}
 	}
+}
+
+// WebsocketWriteMessage send a message in WS connection
+func WebsocketWriteMessage(WSConn *websocket.Conn, message []byte) error {
+	err := WSConn.WriteMessage(websocket.TextMessage, message)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // GetConfigFromGateway get config from gateway
@@ -410,7 +497,7 @@ func Automations() {
 						break
 					}
 					logger.WithFields(logger.Fields{}).Debugf("Action sent to gateway")
-					err = WSConn.WriteMessage(websocket.TextMessage, marshMessage)
+					err = WebsocketWriteMessage(GatewayConn, marshMessage)
 					if err != nil {
 						logger.WithFields(logger.Fields{"code": "CSSA002"}).Errorf("%s", err.Error())
 						continue

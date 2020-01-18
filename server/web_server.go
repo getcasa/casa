@@ -57,7 +57,8 @@ func Start(port string) {
 	v1.GET("/gateway/:gatewayId/plugins/:pluginName", GetPlugin)
 
 	// WS
-	v1.GET("/ws", InitConnection)
+	v1.GET("/ws", InitGatewayConnection)
+	v1.GET("/ws/client", InitClientConnection)
 
 	// Check authorization
 	v1.Use(middleware.KeyAuth(IsAuthenticated))

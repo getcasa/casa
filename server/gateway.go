@@ -8,7 +8,6 @@ import (
 
 	"github.com/ItsJimi/casa/logger"
 	"github.com/ItsJimi/casa/utils"
-	"github.com/gorilla/websocket"
 	"github.com/labstack/echo"
 	"github.com/oklog/ulid/v2"
 )
@@ -436,7 +435,7 @@ func CallAction(c echo.Context) error {
 	}
 
 	marshMessage, _ := json.Marshal(message)
-	err = WSConn.WriteMessage(websocket.TextMessage, marshMessage)
+	err = WebsocketWriteMessage(GatewayConn, marshMessage)
 	if err != nil {
 		logger.WithFields(logger.Fields{"code": "CSSGCA004"}).Errorf("%s", err.Error())
 		return c.JSON(http.StatusInternalServerError, MessageResponse{
