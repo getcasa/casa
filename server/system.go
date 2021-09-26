@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -85,6 +86,9 @@ func GatewayReader(WSConn *websocket.Conn) {
 		_, message, err := WSConn.ReadMessage()
 		if err != nil {
 			logger.WithFields(logger.Fields{"code": "CSDGR001"}).Errorf("%s", err.Error())
+			if strings.Contains(err.Error(), "close 1006") {
+				return
+			}
 			continue
 		}
 		err = json.Unmarshal(message, &wm)
@@ -358,10 +362,11 @@ var listAutomations []automationState
 func Automations() {
 	for range time.Tick(200 * time.Millisecond) {
 		rows, err := DB.Queryx("SELECT * FROM automations")
-		defer rows.Close()
 		if err != nil {
+			fmt.Println(err)
 			continue
 		}
+		defer rows.Close()
 		for rows.Next() {
 			var auto Automation
 			err := rows.Scan(&auto.ID, &auto.HomeID, &auto.Name, pq.Array(&auto.Trigger), pq.Array(&auto.TriggerKey), pq.Array(&auto.TriggerValue), pq.Array(&auto.TriggerOperator), pq.Array(&auto.Action), pq.Array(&auto.ActionCall), pq.Array(&auto.ActionValue), &auto.Status, &auto.CreatedAt, &auto.UpdatedAt, &auto.CreatorID)
